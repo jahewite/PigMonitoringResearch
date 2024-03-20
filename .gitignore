@@ -265,12 +265,12 @@ assets/models/detection/tail_detection/yolo/tail_posture_detection.pt
 assets/test_clips/test_1.mp4
 
 # results
-pipeline_outputs/data_aggregation/Kamera1
-pipeline_outputs/data_aggregation/Kamera2
-pipeline_outputs/data_aggregation/Kamera3
-pipeline_outputs/data_aggregation/Kamera4
-pipeline_outputs/data_aggregation/Kamera5
-pipeline_outputs/data_aggregation/Kamera6
+pipeline_outputs/data_aggregation/piglet_rearing/Kamera1
+pipeline_outputs/data_aggregation/piglet_rearing/Kamera2
+pipeline_outputs/data_aggregation/piglet_rearing/Kamera3
+pipeline_outputs/data_aggregation/piglet_rearing/Kamera4
+pipeline_outputs/data_aggregation/piglet_rearing/Kamera5
+pipeline_outputs/data_aggregation/piglet_rearing/Kamera6
 
 pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera1
 pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera2
