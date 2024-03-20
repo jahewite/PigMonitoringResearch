@@ -10,7 +10,7 @@ This repository contains the code and associated materials for a series of publi
 
 The repository offers:
 
-- Source code developed for the studies.
+- The source code developed for the studies.
 - Links to the datasets and models cited in the publications. For details on data usage and restrictions, see the [License](#license) section. For a detailed description of the dataset, refer to the [Dataset](#dataset) section.
 
 ## Prerequisites
@@ -28,7 +28,7 @@ This section guides you through setting up the project environment, including do
 First, clone this repository to your local machine using Git:
 
 ```
-git clone TBA
+git clone https://github.com/jahewite/PigMonitoringResearch.git
 ```
 
 ### 2. Install dependencies
@@ -36,7 +36,11 @@ git clone TBA
 After cloning the repository, navigate into the project directory and install the project dependencies:
 
 ```
-cd ADD_NAME_HERE
+cd PigMonitoringResearch
+
+# recommended: create venv
+python3 -m venv *env_name*
+
 pip install -r requirements.txt
 ```
 
@@ -67,6 +71,13 @@ Use Homebrew to install FFmpeg:
 brew install ffmpeg
 ```
 
+#### Linux
+Use apt-get to install FFmpeg:
+```
+sudo apt-get update
+sudo apt-get install ffmpeg
+```
+
 ## Usage
 
 ```
@@ -75,7 +86,7 @@ python3 -m pipeline.analyze_video --path_to_videos (eg path to test clip)
 
 ## Datasets
 
-This project includes all the datasets applied in the research papers. The data can be downloaded here.
+This project includes all the datasets used in the research papers. The data can be downloaded here.
 
 ### Data sources
 
