@@ -1,2 +1,0 @@
-datetime,start_frame,end_frame,num_tail_detections,num_tails_upright,num_tails_hanging,num_pig_detections,num_pigs_lying,num_pigs_notLying,activity,posture_diff
-2022-05-17,1799.5,1800.5,0.40555555555555556,0.762987987987988,0.237012012012012,18.425555555555555,17.735277777777778,0.6902777777777778,0.01910808557932759,0.5259759759759759
