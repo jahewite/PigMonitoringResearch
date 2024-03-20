@@ -1,0 +1,14 @@
+jupyter
+ipywidgets
+tqdm
+imageio==2.34.0
+matplotlib==3.5.2
+numpy==1.22.3
+pandas==1.4.2
+Pillow==9.5.0
+torch==1.13.1
+torchvision==0.14.1
+ultralytics==8.0.173
+tqdm==4.64.0
+opencv_python==4.7.0.68
+ipykernel>=5.3.0

@@ -1,0 +1,306 @@
+{
+    "M3": [
+        {
+            "B1": [
+                {
+                    "start_date": "20220120",
+                    "end_date": "20220501",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB360": {
+                                "start": "20220120",
+                                "end": "20220501"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "start_date": "20220616",
+                    "end_date": "20221009",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB360": {
+                                "start": "20220616",
+                                "end": "20221005"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B2": [
+                {
+                    "start_date": "20220120",
+                    "end_date": "20220501",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB34D": {
+                                "start": "20220120",
+                                "end": "20220501"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "start_date": "20220616",
+                    "end_date": "20221009",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB34D": {
+                                "start": "20220616",
+                                "end": "20221009"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B3": [
+                {
+                    "start_date": "20220120",
+                    "end_date": "20220501",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F270CC3": {
+                                "start": "20220120",
+                                "end": "20220501"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "start_date": "20220616",
+                    "end_date": "20221009",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F270CC3": {
+                                "start": "20220616",
+                                "end": "20221007"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B4": [
+                {
+                    "start_date": "20220120",
+                    "end_date": "20220501",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB325": {
+                                "start": "20220120",
+                                "end": "20220501"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "start_date": "20220616",
+                    "end_date": "20221009",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F270CC3": {
+                                "start": "20220616",
+                                "end": "20220926"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B5": [
+                {
+                    "start_date": "20220120",
+                    "end_date": "20220501",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F1F698C": {
+                                "start": "20220120",
+                                "end": "20220501"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "start_date": "20220616",
+                    "end_date": "20221009",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F1F698C": {
+                                "start": "20220616",
+                                "end": "20221007"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B6": [
+                {
+                    "start_date": "20220120",
+                    "end_date": "20220501",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB34B": {
+                                "start": "20220120",
+                                "end": "20220501"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "start_date": "20220616",
+                    "end_date": "20221009",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F1F698C": {
+                                "start": "20220616",
+                                "end": "20221007"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "M4": [
+        {
+            "B1": [
+                {
+                    "start_date": "20220407",
+                    "end_date": "20220710",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F1F4CB3": {
+                                "start": "20220407",
+                                "end": "20220710"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B2": [
+                {
+                    "start_date": "20220407",
+                    "end_date": "20220710",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB2E7": {
+                                "start": "20220407",
+                                "end": "20220710"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B3": [
+                {
+                    "start_date": "20220407",
+                    "end_date": "20220710",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F270CB5": {
+                                "start": "20220407",
+                                "end": "20220710"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B4": [
+                {
+                    "start_date": "20220407",
+                    "end_date": "20220710",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB2F0": {
+                                "start": "20220407",
+                                "end": "20220710"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B5": [
+                {
+                    "start_date": "20220407",
+                    "end_date": "20220710",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB2A3": {
+                                "start": "20220407",
+                                "end": "20220710"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "B5": [
+                {
+                    "start_date": "20220407",
+                    "end_date": "20220710",
+                    "status": "not_analyzed",
+                    "damaged_dirpath": false,
+                    "cameras": [
+                        {
+                            "axis-B8A44F2CB2B1": {
+                                "start": "20220407",
+                                "end": "20220710"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

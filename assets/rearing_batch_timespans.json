@@ -1,0 +1,254 @@
+{
+    "Kamera1": [
+        {
+            "start_date": "20211228AM",
+            "end_date": "20220120AM",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220228AM",
+            "end_date": "20220331PM",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220505",
+            "end_date": "20220530",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220725",
+            "end_date": "20220831",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20221003",
+            "end_date": "20221110",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20221219",
+            "end_date": "20230126",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230227",
+            "end_date": "20230406",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230515",
+            "end_date": "20230620",
+            "status": "analyzed"
+        }
+    ],
+    "Kamera2": [
+        {
+            "start_date": "20211227",
+            "end_date": "20220120",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220228",
+            "end_date": "20220407",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220505",
+            "end_date": "20220530",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220725",
+            "end_date": "20220905",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20221003",
+            "end_date": "20221107",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20221219",
+            "end_date": "20230126",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230227",
+            "end_date": "20230406",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230515",
+            "end_date": "20230621",
+            "status": "analyzed"
+        }
+    ],
+    "Kamera3": [
+        {
+            "start_date": "20211222",
+            "end_date": "20220119",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220228",
+            "end_date": "20220330",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220505",
+            "end_date": "20220529",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20220725",
+            "end_date": "20220905",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20221003",
+            "end_date": "20221106",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20221219",
+            "end_date": "20230125",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20230227",
+            "end_date": "20230406",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230515",
+            "end_date": "20230621",
+            "status": "not_analyzed"
+        }
+    ],
+    "Kamera4": [
+        {
+            "start_date": "20211229",
+            "end_date": "20220119",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220228",
+            "end_date": "20220407",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220510",
+            "end_date": "20220529",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220725",
+            "end_date": "20220905",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20221003",
+            "end_date": "20221106",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20221219",
+            "end_date": "20230126",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230227",
+            "end_date": "20230406",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230515",
+            "end_date": "20230621",
+            "status": "not_analyzed"
+        }
+    ],
+    "Kamera5": [
+        {
+            "start_date": "20211231",
+            "end_date": "20220119",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220228",
+            "end_date": "20220407",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220510",
+            "end_date": "20220529",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220725",
+            "end_date": "20220831",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20221004",
+            "end_date": "20221104",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20221219",
+            "end_date": "20230126",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20230227",
+            "end_date": "20230406",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20230515",
+            "end_date": "20230621",
+            "status": "not_analyzed"
+        }
+    ],
+    "Kamera6": [
+        {
+            "start_date": "20211230",
+            "end_date": "20220120",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220228",
+            "end_date": "20220407",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220509",
+            "end_date": "20220530",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20220725",
+            "end_date": "20220905",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20221003",
+            "end_date": "20221107",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20221219",
+            "end_date": "20230126",
+            "status": "not_analyzed"
+        },
+        {
+            "start_date": "20230227",
+            "end_date": "20230406",
+            "status": "analyzed"
+        },
+        {
+            "start_date": "20230515",
+            "end_date": "20230621",
+            "status": "analyzed"
+        }
+    ]
+}
