@@ -6,12 +6,9 @@ This repository contains the code and associated materials for a series of publi
 - [Image-based Tail Posture Monitoring of Pigs](https://www.researchgate.net/publication/374156938_Image-based_Tail_Posture_Monitoring_of_Pigs)
 - [ECPLF Publication]
 
-## Contents
+It also includes links to the datasets and models cited in the publications. For details on data usage and restrictions, see the [License](#license) section. For a detailed description of the dataset, refer to the [Dataset](#dataset) section.
 
-The repository offers:
-
-- The source code developed for the studies.
-- Links to the datasets and models cited in the publications. For details on data usage and restrictions, see the [License](#license) section. For a detailed description of the dataset, refer to the [Dataset](#dataset) section.
+Check out the [data exploration](data_exploration) directory for more details.
 
 ## Prerequisites
 
@@ -25,7 +22,7 @@ This section guides you through setting up the project environment, including do
 
 ### 1. Clone the Repository
 
-First, clone this repository to your local machine using Git:
+First, clone this repository:
 
 ```
 git clone https://github.com/jahewite/PigMonitoringResearch.git
@@ -43,8 +40,6 @@ python3 -m venv *env_name*
 
 pip install -r requirements.txt
 ```
-
-This command installs the project and any dependencies listed in the setup.py file.
 
 ### 3. Download necessary files
 
@@ -78,10 +73,11 @@ sudo apt-get update
 sudo apt-get install ffmpeg
 ```
 
-## Usage
+## Example usage
 
+If downloaded, use the test clip for example usage. From the root directory, execute the following command:
 ```
-python3 -m pipeline.analyze_video --path_to_videos (eg path to test clip)
+python3 -m pipeline.analyze_video --path_to_videos assets/test_clips/test_1.mp4
 ```
 
 ## Datasets
@@ -133,5 +129,6 @@ This project is licensed under multiple licenses:
 Please see the respective license files for more detailed information.
 
 ## Acknowledgements
+This project was developed as part of the [DigiSchwein](https://www.lwk-niedersachsen.de/lwk/news/35309_DigiSchwein) project.
 
 The project is supported (was supported) by fundsof the Federal Ministry of Food and Agriculture (BMEL) based on a decision of the Parliament of theFederal Republic of Germany. The Federal Office for Agriculture and Food (BLE) provides (provided)coordinating support for digitalization in agriculture asfunding organization, grantnumber 28DE109A18.
