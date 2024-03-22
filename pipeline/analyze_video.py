@@ -12,7 +12,7 @@ from pipeline.activity_monitoring import PigActivityAnalyzer
 from pipeline.utils.image_preprocessor import ImagePreprocessor
 from pipeline.tail_detection_processor import TailDetectionProcessor
 
-from pipeline.utils.general import load_label_file, load_json_data, setup_logging
+from pipeline.utils.general import load_label_file, load_json_data, setup_logging, print_ascii_art
 from pipeline.utils.video_file_utils import get_frame_of_video, get_time_of_video_capture, format_pipeline_result_filename
 
 # Init logging
@@ -58,6 +58,9 @@ def analyze_videos(video_dir):
     the first video file can be successfully loaded. If these conditions are not met, the function
     may not behave as expected.
     """
+
+    # Print ASCII art
+    print_ascii_art()
 
     # Initialize path manager
     path_manager = PathManager()
