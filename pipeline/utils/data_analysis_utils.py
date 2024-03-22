@@ -20,10 +20,10 @@ def load_data_as_dataframe(path_to_dataframe):
     - Filtering entries between 08:00:00 and 16:30:00 based on 'start_time' and 'end_time'
 
     Parameters:
-    path_to_dataframe (str): The path to the .csv file to be loaded into a DataFrame
+        path_to_dataframe (str): The path to the .csv file to be loaded into a DataFrame
 
     Returns:
-    df (pandas.DataFrame): The transformed DataFrame ready for analysis
+        df (pandas.DataFrame): The transformed DataFrame ready for analysis
     """
     # load dataframe
     df = pd.read_csv(path_to_dataframe, parse_dates=[
@@ -76,10 +76,10 @@ def fill_dataframe_with_nan(df):
     Fills missing timestamps in a dataframe with NaN values, based on a desired time range of 08:00:00 to 16:30:00.
 
     Parameters:
-    df (DataFrame): The dataframe to be filled with NaN values.
+        df (DataFrame): The dataframe to be filled with NaN values.
 
     Returns:
-    df_filled (DataFrame): The filled dataframe with NaN values.
+        df_filled (DataFrame): The filled dataframe with NaN values.
     """
 
     # Convert the 'datetime' column to a datetime type if it's not already
@@ -120,10 +120,10 @@ def load_data_from_list(paths_to_data_list):
     on each path, and appends the resulting DataFrame to a list. It returns this list of DataFrames.
 
     Parameters:
-    paths_to_data_list (list of str): A list of paths to .csv files to be loaded into DataFrames.
+        paths_to_data_list (list of str): A list of paths to .csv files to be loaded into DataFrames.
 
     Returns:
-    df_list (list of pandas.DataFrame): A list of transformed DataFrames ready for analysis.
+        df_list (list of pandas.DataFrame): A list of transformed DataFrames ready for analysis.
     """
     df_list = [load_data_as_dataframe(path_to_df)
                for path_to_df in paths_to_data_list]
@@ -151,17 +151,17 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
                     only populated if as_df_list is set to True, otherwise it's an empty list.
 
     Parameters:
-    dir (str): The path to the main directory that contains the camera directories.
-    path_to_configs (str): path to cinfiguration files.
-    compartment (str): The specific compartment to look into. Defaults to "piglet_rearing".
-    camera (str, optional): The specific camera name to load results for. If None, load results for all cameras.
-    as_df_list (bool): If True, load the .csv files into pandas DataFrames and store them in the 'dataframes'
-                       key of the dictionary. If False, leave the 'dataframes' key as an empty list.
+        dir (str): The path to the main directory that contains the camera directories.
+        path_to_configs (str): path to cinfiguration files.
+        compartment (str): The specific compartment to look into. Defaults to "piglet_rearing".
+        camera (str, optional): The specific camera name to load results for. If None, load results for all cameras.
+        as_df_list (bool): If True, load the .csv files into pandas DataFrames and store them in the 'dataframes'
+                        key of the dictionary. If False, leave the 'dataframes' key as an empty list.
 
     Returns:
-    data_list (list of dict): A list of dictionaries. Each dictionary contains information 
-    about a time-span directory under a camera directory, including the camera name, 
-    the time span, the file paths to the data files, and potentially a list of DataFrames.
+        data_list (list of dict): A list of dictionaries. Each dictionary contains information 
+        about a time-span directory under a camera directory, including the camera name, 
+        the time span, the file paths to the data files, and potentially a list of DataFrames.
     """
     data_list = []
 
@@ -238,17 +238,17 @@ def get_mvg_avg_from_data_dict(data_dict, rolling_window):
     The function uses the 'get_mvg_avg' function to calculate the moving averages.
 
     Parameters:
-    data_dict (dict): A dictionary containing a non-empty list of dataframes under 
-                      the 'dataframes' key.
-    rolling_window (int): The size of the moving window used for calculation in 
-                          the 'get_mvg_avg' function.
+        data_dict (dict): A dictionary containing a non-empty list of dataframes under 
+                        the 'dataframes' key.
+        rolling_window (int): The size of the moving window used for calculation in 
+                            the 'get_mvg_avg' function.
 
     Returns:
-    list: A list of dataframes with calculated moving averages for the specified columns.
+        list: A list of dataframes with calculated moving averages for the specified columns.
 
     Raises:
-    AssertionError: If the input is not a dictionary, if the dictionary does not contain 
-                    a 'dataframes' key, or if the value for this key is not a non-empty list.
+        AssertionError: If the input is not a dictionary, if the dictionary does not contain 
+                        a 'dataframes' key, or if the value for this key is not a non-empty list.
     """
     assert isinstance(data_dict, dict), "Input should be a dictionary."
     assert isinstance(data_dict["dataframes"], list) and data_dict["dataframes"], \
@@ -269,11 +269,11 @@ def get_mvg_avg(df, rolling_window):
     and 'activity' columns in the given DataFrame.
 
     Parameters:
-    df (pandas.DataFrame): Input DataFrame.
-    rolling_window (int): The size of the moving window used for calculation.
+        df (pandas.DataFrame): Input DataFrame.
+        rolling_window (int): The size of the moving window used for calculation.
 
     Returns:
-    pandas.DataFrame: A DataFrame containing the moving averages for the specified columns.
+        pandas.DataFrame: A DataFrame containing the moving averages for the specified columns.
     """
 
     # Select the relevant columns from the input DataFrame and calculate their moving average.
@@ -297,18 +297,18 @@ def get_filtered_data_from_data_dict(data_dict, ratio_notLying):
     The function uses the 'filter_data_at_posture_ratio' function to filter the dataframes.
 
     Parameters:
-    data_dict (dict): A dictionary containing a non-empty list of dataframes under 
-                      the 'dataframes' key.
-    ratio_notLying (float): The threshold ratio used for filtering the DataFrame.
+        data_dict (dict): A dictionary containing a non-empty list of dataframes under 
+                        the 'dataframes' key.
+        ratio_notLying (float): The threshold ratio used for filtering the DataFrame.
 
     Returns:
-    list: A list of filtered dataframes where each dataframe only includes rows with a 
-          'num_pigs_notLying' to 'num_pigs_lying' ratio greater than or equal to ratio_notLying.
+        list: A list of filtered dataframes where each dataframe only includes rows with a 
+            'num_pigs_notLying' to 'num_pigs_lying' ratio greater than or equal to ratio_notLying.
 
     Raises:
-    AssertionError: If the input is not a dictionary, if the dictionary does not contain 
-                    a 'dataframes' key, if the value for this key is not a non-empty list,
-                    or if the elements of the list are not pandas DataFrame instances.
+        AssertionError: If the input is not a dictionary, if the dictionary does not contain 
+                        a 'dataframes' key, if the value for this key is not a non-empty list,
+                        or if the elements of the list are not pandas DataFrame instances.
     """
     assert isinstance(data_dict, dict), "Input should be a dictionary."
     assert isinstance(data_dict["dataframes"], list) and data_dict["dataframes"], \
@@ -330,13 +330,13 @@ def filter_data_at_posture_ratio(df, ratio_notLying):
     the specified ratio_notLying value.
 
     Parameters:
-    df (pandas.DataFrame): Input DataFrame with at least two columns 'num_pigs_notLying' 
-    and 'num_pigs_lying' containing numeric data.
-    ratio_notLying (float): The threshold ratio used for filtering the DataFrame.
+        df (pandas.DataFrame): Input DataFrame with at least two columns 'num_pigs_notLying' 
+        and 'num_pigs_lying' containing numeric data.
+        ratio_notLying (float): The threshold ratio used for filtering the DataFrame.
 
     Returns:
-    pandas.DataFrame: A filtered DataFrame where each row has a 'num_pigs_notLying' to 
-    'num_pigs_lying' ratio greater than or equal to ratio_notLying.
+        pandas.DataFrame: A filtered DataFrame where each row has a 'num_pigs_notLying' to 
+        'num_pigs_lying' ratio greater than or equal to ratio_notLying.
     """
     # Calculate the ratio of 'num_pigs_notLying' to 'num_pigs_lying' for each row in the DataFrame
     # and only keep rows where this ratio is greater than or equal to ratio_notLying
@@ -354,19 +354,19 @@ def plot_aggregated_data_per_day(list_of_experiments, aggregation_type, figsize,
     number of experiments. Each row has three subplots, and more rows are added as needed.
 
     Parameters:
-    list_of_experiments (list): List of experiments. Each experiment is a list of pandas DataFrames, 
-                                each DataFrame represents a day and contains columns 'num_tails_hanging', 
-                                'num_tails_upright', 'activity', and 'datetime'.
-    aggregation_type (str): The type of aggregation operation to apply. It must be either "avg" (average) or "median".
-    tails_upright (bool, optional): If True, include the 'num_tails_upright' data in the plot. Default is True.
-    tails_hanging (bool, optional): If True, include the 'num_tails_hanging' data in the plot. Default is True.
-    activity (bool, optional): If True, include the 'activity' data in the plot. Default is True.
+        list_of_experiments (list): List of experiments. Each experiment is a list of pandas DataFrames, 
+                                    each DataFrame represents a day and contains columns 'num_tails_hanging', 
+                                    'num_tails_upright', 'activity', and 'datetime'.
+        aggregation_type (str): The type of aggregation operation to apply. It must be either "avg" (average) or "median".
+        tails_upright (bool, optional): If True, include the 'num_tails_upright' data in the plot. Default is True.
+        tails_hanging (bool, optional): If True, include the 'num_tails_hanging' data in the plot. Default is True.
+        activity (bool, optional): If True, include the 'activity' data in the plot. Default is True.
 
     Raises:
-    ValueError: If the 'aggregation_type' is not either "avg" or "median".
+        ValueError: If the 'aggregation_type' is not either "avg" or "median".
 
     Returns:
-    None: The function generates a matplotlib plot.
+        None: The function generates a matplotlib plot.
     """
 
     if aggregation_type not in ["avg", "median"]:
@@ -524,14 +524,14 @@ def aggregate_pipeline_montioring_results(monitoring_result, path_to_result_data
     Transforms the tail posture data from the monitoring result according to specified parameters and saves the transformed data to a CSV file.
 
     Parameters:
-    - monitoring_result (dict): Contains dataframes with tail posture data.
-    - resample_freq (str): Frequency for data resampling (default is "D" for daily).
-    - normalize (bool): If True, normalizes the tail posture data before processing.
-    - rolling_window (int or None): Specifies the window size for rolling average calculation. If None, no rolling average is applied.
-    - path_to_result_data_aggregations (str): Path to save the transformed data CSV file.
+        monitoring_result (dict): Contains dataframes with tail posture data.
+        resample_freq (str): Frequency for data resampling (default is "D" for daily).
+        normalize (bool): If True, normalizes the tail posture data before processing.
+        rolling_window (int or None): Specifies the window size for rolling average calculation. If None, no rolling average is applied.
+        path_to_result_data_aggregations (str): Path to save the transformed data CSV file.
 
     Returns:
-    None. The transformed data is saved as a CSV file.
+        None. The transformed data is saved as a CSV file.
     """
 
     if path_to_result_data_aggregations:
@@ -578,15 +578,15 @@ def get_pen_info(camera, date_span, json_data):
     Retrieve information about a pen based on camera and date_span from provided JSON data.
 
     Parameters:
-    - camera (str): The camera identifier for which pen info is being retrieved.
-    - date_span (str): The span of dates associated with the pen data, used to match the correct entry in JSON data.
-    - json_data (list of dicts): A list containing dictionaries, each representing data about a pen, including camera, datespan, and pen characteristics such as type, culprit removal date, peak day, and low day.
+        camera (str): The camera identifier for which pen info is being retrieved.
+        date_span (str): The span of dates associated with the pen data, used to match the correct entry in JSON data.
+        json_data (list of dicts): A list containing dictionaries, each representing data about a pen, including camera, 
+        datespan, and pen characteristics such as type, culprit removal date, peak day, and low day.
 
     Returns:
-    Tuple[str, str, Optional[int], Optional[int]]: A tuple containing the pen type, culprit removal date and ground truth datespan.
-    If no matching entry is found in the json_data, returns ("Unknown", "Unknown", "Unknown").
-
-    The 'culprit_removal' and 'datespan_gt' are returned as "Unknown" if not specified.
+        Tuple[str, str, Optional[int], Optional[int]]: A tuple containing the pen type, culprit removal date and ground truth datespan.
+        If no matching entry is found in the json_data, returns ("Unknown", "Unknown", "Unknown").
+        The 'culprit_removal' and 'datespan_gt' are returned as "Unknown" if not specified.
     """
     for entry in json_data:
         if entry["camera"] == camera and entry["datespan"] == date_span:
@@ -602,13 +602,13 @@ def format_datespan(datespan):
     Convert a date span string into a more human-readable format.
 
     Parameters:
-    - datespan (str): The span of dates in the format 'yymmdd_yymmdd', where the first part is the start date and the second part is the end date.
+        datespan (str): The span of dates in the format 'yymmdd_yymmdd', where the first part is the start date and the second part is the end date.
 
     Returns:
-    str: The formatted date span as 'dd.mm.yyyy - dd.mm.yyyy'.
+        str: The formatted date span as 'dd.mm.yyyy - dd.mm.yyyy'.
 
     Example:
-    Given a datespan '220101_220131', it returns '01.01.2022 - 31.01.2022'.
+        Given a datespan '220101_220131', it returns '01.01.2022 - 31.01.2022'.
     """
     start_date, end_date = datespan.split('_')
     start_date_formatted = datetime.strptime(
@@ -623,15 +623,15 @@ def sorting_key(pen_data):
     Extracts a sorting key from a dictionary containing information about a pen.
 
     Parameters:
-    - pen_data (dict): A dictionary containing at least two keys, 'camera' and 'date_span'. The
-      'camera' key should have a string value in the format "KameraX" where X is the pen number.
-      The 'date_span' key should have a string value in the format 'yymmdd_yymmdd' representing
-      the start and end dates.
+        pen_data (dict): A dictionary containing at least two keys, 'camera' and 'date_span'. The
+        'camera' key should have a string value in the format "KameraX" where X is the pen number.
+        The 'date_span' key should have a string value in the format 'yymmdd_yymmdd' representing
+        the start and end dates.
 
     Returns:
-    tuple: A tuple containing two elements:
-        - int: The pen number extracted and converted from the 'camera' string.
-        - datetime.datetime: The start date extracted from the 'date_span' string and converted to a datetime object.
+        tuple: A tuple containing two elements:
+            - int: The pen number extracted and converted from the 'camera' string.
+            - datetime.datetime: The start date extracted from the 'date_span' string and converted to a datetime object.
     """
     # Extract pen number from the 'camera' string
     pen_number = int(pen_data['camera'].replace("Kamera", ""))

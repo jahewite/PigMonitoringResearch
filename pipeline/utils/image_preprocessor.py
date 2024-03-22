@@ -2,24 +2,41 @@ import os
 
 class ImagePreprocessor:
     """
-    A class used to preprocess images based on the configuration and video path.
-    ...
-    Attributes
-    ----------
-    config : dict
-        A dictionary containing the configuration settings loaded from a JSON file.
-    camera_name : str
-        The name of the camera parsed from the video file path or given prefix.
-    cut_ratios : dict
-        A dictionary containing the cut ratios for the top, right, left, and bottom of the image.
+    Preprocesses images for analysis by cutting specified portions based on predefined cut ratios. 
+    This preprocessor is designed to work with images from specific cameras, where each camera 
+    might require different areas of the image to be excluded from analysis due to variations 
+    in camera setup, field of view, or specific areas of interest.
 
-    Methods
-    -------
-    cut_img_portion(img):
-        Cuts the portions of an image based on the cut ratios.
+    Attributes:
+        config (dict): Configuration settings loaded from a JSON file, containing preprocessing details
+                       for one or more cameras. This includes cut ratios for each camera to specify
+                       what portions of the image should be removed during preprocessing.
+        camera_name (str): The name of the camera, determined either directly from a provided prefix
+                           or parsed from the video file path. This name is used to retrieve camera-specific
+                           preprocessing settings from the config.
+        cut_ratios (dict): Cut ratios for the current camera, dictating the portions of the image to be cut
+                           from the top, right, left, and bottom edges. Ratios are expressed as fractions of
+                           the total image height or width.
+
+    Methods:
+        cut_img_portion(img):
+            Cuts the specified portions from an image according to the cut ratios. This method modifies
+            the input image to focus on the area of interest by removing unnecessary or distracting
+            parts of the image that do not contribute to the analysis.
+
+    Parameters:
+        config (dict): A dictionary containing the preprocessing configuration for each camera.
+        video_path (str, optional): The path to the video file from which the camera name should be
+                                    parsed. Required if 'prefix' is not provided.
+        prefix (str, optional): An optional prefix to directly specify the camera name. Takes precedence
+                                over 'video_path' for determining the camera name.
     """
 
     def __init__(self, config, video_path=None, prefix=None):
+        """
+        Initializes the ImagePreprocessor with configuration settings and determines the camera name
+        based on either a provided video path or prefix.
+        """
         self.config = config
 
         # If prefix is given, use it as the camera name
@@ -36,13 +53,14 @@ class ImagePreprocessor:
 
     def cut_img_portion(self, img):
         """
-        This function cuts the specified portions of an image based on the cut ratios.
+        Cuts specified portions from the input image based on the preconfigured cut ratios for the camera.
 
         Args:
-            img (np.ndarray): The image array.
+            img (np.ndarray): The input image array to be preprocessed.
 
         Returns:
-            cut_img (np.ndarray): The resultant image after cutting the specified portions.
+            np.ndarray: The resultant image after cutting specified portions from the top, right,
+                        bottom, and left, according to the cut ratios.
         """
 
         # Get the height and width of the image

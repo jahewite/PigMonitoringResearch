@@ -6,51 +6,48 @@ from collections import defaultdict
 
 class TailDetectionProcessor:
     """
-    The TailDetectionProcessor class processes and filters tail detections in a sequence of images.
+    Processes and filters tail detections in pig images, specifically focusing on handling overlapping 
+    detections and filtering based on pig posture. The processor scales tail detections to the original image size, 
+    applies criteria to filter out detections based on posture, and utilizes Non-Maximum Suppression (NMS) to select 
+    the best bounding box for tail detections.
 
-    Currently, the tail detections within a 'pigLying' bounding box are filtered out, which might lead to discarding correctly classified bounding boxes of standing pigs. 
-    A special consideration is given to 'pigNotLying' bounding boxes that overlap with multiple 'pigLying' bounding boxes and contain the detected 
-    tail object in their overlapping area.
+    Note:
+        Currently, the tail detections within a 'pigLying' bounding box are filtered out, which might lead to discarding correctly 
+        classified bounding boxes of standing pigs. A special consideration is given to 'pigNotLying' bounding boxes that overlap 
+        with multiple 'pigLying' bounding boxes and contain the detected tail object in their overlapping area.
 
     Attributes:
-        labels_posture_classification_reverse (dict): Mapping for reversing the encoded postures.
-        labels_tail_upright_hanging_detection_reverse (dict): Mapping for reversing the encoded tail positions.
-        filter_lying_pigs (bool): A flag for whether to filter out tail detections for pigs in a lying posture.
+        labels_posture_classification_reverse (dict): A mapping from numeric labels to their string representations for pig postures.
+        labels_tail_upright_hanging_detection_reverse (dict): A mapping from numeric labels to their string representations for tail positions (upright or hanging).
 
     Methods:
-        scale_tail_detections(pig_detections, posture_classifications, tail_detections, labels_posture_classification_reverse, labels_tail_upright_hanging_detection_reverse): 
-            Scales tail detection bounding boxes and packs all relevant information into a list of dictionaries.
-
-        calculate_overlap_percentage(big_box, small_box):
-            Calculates the overlap percentage between a smaller box and a bigger box.
-
-        filter_tail_detections(pig_detections, tail_detections_holder):
-            Filters out overlapping tail detections. Additionally, filters out detections of pigs in a lying posture based on the 'filter_lying_pigs' flag.
-
-        is_bbox_inside(box_1, box_2):
-            Checks if one bounding box is entirely within another.
-
-        process_tail_detections(pig_detections, posture_classifications, tail_detections, labels_posture_classification_reverse, labels_tail_posture_detection_reverse):
-            Processes tail detections by scaling them and then filtering them according to the specified criteria.
+        scale_tail_detections(pig_detections, posture_classifications, tail_detections): Scales the tail detection bounding boxes to the original image size.
+        calculate_overlap_percentage(big_box, small_box): Calculates the overlap percentage of one bounding box within another.
+        filter_tail_detections(tail_detections_holder): Filters overlapping tail detections and tail detections for pigs in a lying posture.
+        is_bbox_inside(box_1, box_2): Checks if one bounding box is completely inside another.
+        apply_nms(predictions, iou_threshold): Applies Non-Maximum Suppression (NMS) to reduce overlapping bounding boxes based on their confidence scores.
+        select_best_detections(tail_detections_holder): Selects the detection with the highest confidence score for each unique pig detection.
+        process_tail_detections(pig_detections, posture_classifications, tail_detections): Orchestrates the tail detection processing, including scaling, filtering, and applying NMS.
     """
 
     def __init__(self, labels_posture_classification_reverse, labels_tail_upright_hanging_detection_reverse):
+        """
+        Initializes the TailDetectionProcessor with mappings for posture and tail position classifications.
+        """
         self.labels_posture_classification_reverse = labels_posture_classification_reverse
         self.labels_tail_upright_hanging_detection_reverse = labels_tail_upright_hanging_detection_reverse
 
     def scale_tail_detections(self, pig_detections, posture_classifications, tail_detections):
-        """ 
-        Scales tail detection bounding boxes and packs all relevant information into a list of dictionaries.
+        """
+        Scales tail detection bounding boxes to the original image size and packages detection information.
 
         Parameters:
-            pig_detections (list): List of pig detections.
-            posture_classifications (list): List of posture classifications.
-            tail_detections (list): List of tail detections.
-            labels_posture_classification_reverse (dict): Mapping for reversing the encoded postures.
-            labels_tail_upright_hanging_detection_reverse (dict): Mapping for reversing the encoded tail positions.
+            pig_detections (list): Detected pig bounding boxes.
+            posture_classifications (list): Posture classification for each detected pig.
+            tail_detections (list): Detected tail bounding boxes within pig detections.
 
         Returns:
-            tail_detections_holder (list): List of tail detections scaled to the original input image size containing additional information. 
+            List[Dict]: Tail detections with scaled bounding boxes and additional information.
         """
         tail_detections_holder = []
 
@@ -215,17 +212,13 @@ class TailDetectionProcessor:
 
     def select_best_detections(self, tail_detections_holder):
         """
-        This function selects the detection with the highest confidence score
-        for each unique 'idx_pig_detection' from a list of detections.
+        Selects the best detection for each unique pig based on the highest confidence score.
 
         Parameters:
-        tail_detections_holder (list): A list of dictionary entries where each entry
-        represents a tail detection and contains 'idx_pig_detection', 'conf_score',
-        and other associated data.
+            tail_detections_holder (list): A list of processed and potentially overlapping tail detections.
 
         Returns:
-        list: A list containing the highest confidence detection for each unique 
-        'idx_pig_detection'.
+            List[Dict]: A list containing the best detection for each unique pig.
         """
 
         # Create a dictionary where the keys are the 'idx_pig_detection' values and the
@@ -252,6 +245,20 @@ class TailDetectionProcessor:
         return tail_detections_holder
 
     def process_tail_detections(self, pig_detections, posture_classifications, tail_detections):
+        """
+        Orchestrates the processing of tail detections, including scaling, filtering based on posture, and applying 
+        Non-Maximum Suppression (NMS) to refine the detection results.
+
+        Parameters:
+            pig_detections (list): Detected pig bounding boxes from the image.
+            posture_classifications (list): Classification results indicating the posture of each detected pig.
+            tail_detections (list): Detected tail bounding boxes within the pig detections.
+
+        Returns:
+            List[Dict]: Processed and filtered tail detections, with each detection including details such as the scaled bounding box, 
+            confidence score, and the label indicating tail posture.
+
+        """
         scaled_tail_detections = self.scale_tail_detections(
             pig_detections, posture_classifications, tail_detections)
         filtered_tail_detections = self.filter_tail_detections(scaled_tail_detections)

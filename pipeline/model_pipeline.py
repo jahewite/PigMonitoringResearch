@@ -10,17 +10,36 @@ from ultralytics.utils.plotting import save_one_box
 
 
 class ModelPipeline(nn.Module):
-    '''
-    Combination of YOLOv5 and EfficientNetV2.
-    This class represents a model that combines pig detection, posture classification, and tail detection tasks.
-    The model takes an input image, detects pigs using the YOLOv8 model, and passes the predicted bounding boxes
-    to the EfficientNetV2 model for posture classification into 'lying' and 'not lying' postures.
-    The tail detection is also performed on the cropped image of the pig detection.
-    Optionally, you can filter out lying pigs during the tail detection process to monitor only the tail posture
-    of standing pigs.
-    '''
+    """
+    A model pipeline that integrates YOLOv8 for pig detection and EfficientNetV2 for posture classification,
+    with an additional YOLOv8 model for tail detection. This comprehensive model is designed for analyzing
+    pig images to detect pigs, classify their postures as 'lying' or 'not lying', and detect tail postures.
+    The model supports filtering to exclude lying pigs from tail detection analysis, focusing on standing pigs.
+
+    Attributes:
+        crop_size (int): The size to which detected pig images are cropped for posture classification.
+        filter_lying_pigs (bool): Flag to determine whether lying pigs are excluded from tail detection.
+        path_manager (PathManager): Instance of PathManager to manage paths for model weights.
+        pig_detection (YOLO): YOLO model for detecting pigs in images.
+        tail_posture_detection (YOLO): YOLO model for detecting tail postures in cropped pig images.
+        posture_classification (EfficientNetV2): Model for classifying pig postures based on cropped images.
+        device (torch.device): The device (CPU/GPU) on which the models are loaded and inference is performed.
+        crop_transform (transforms.Compose): Transformations applied to cropped pig images for posture classification.
+
+    Methods:
+        __init__(self, crop_size, filter_lying_pigs=True): Initializes the model pipeline with specified configurations.
+        format_parser(self, x, predictions): Formats YOLOv8 predictions to a standardized structure.
+        forward(self, x): Processes an input image through the pipeline, performing detection, classification, and analysis.
+    """
 
     def __init__(self, crop_size, filter_lying_pigs=True):
+        """
+        Initializes the ModelPipeline class with specified crop size and an option to filter lying pigs during tail detection.
+
+        Args:
+            crop_size (int): The size to which images are cropped for posture classification.
+            filter_lying_pigs (bool, optional): Whether to exclude lying pigs from tail detection. Defaults to True.
+        """
         super(ModelPipeline, self).__init__()
 
         self.filter_lying_pigs = filter_lying_pigs
@@ -57,17 +76,18 @@ class ModelPipeline(nn.Module):
         ])
 
     def format_parser(self, x, predictions):
-        '''
-        Formats the predictions from the YOLOv8 model into YOLOv5 format.
+        """
+        Formats the predictions from the YOLOv8 model to match the expected structure 
+        (Legacy code since pipeline was originally developed using YOLOv5), including converting bounding boxes
+        and extracting cropped images for further analysis.
 
         Args:
-            x (Tensor): Input image tensor.
-            predictions (List[Dict]): List of prediction dictionaries containing bounding box,
-                                    confidence, class, label, and cropped image.
+            x (Tensor): The input image tensor.
+            predictions (List[Dict]): Predictions from the YOLOv8 model, including bounding boxes and other details.
 
         Returns:
-            List[Dict]: Formatted predictions.
-        '''
+            List[Dict]: Formatted predictions with standardized structure for ease of processing.
+        """
         holder = []
         for pred in predictions[0]:
             parser_holder = {
@@ -81,16 +101,17 @@ class ModelPipeline(nn.Module):
         return holder
 
     def forward(self, x):
-        '''
-        Forward pass of the Pipeline class.
+        """
+        Conducts a forward pass through the pipeline, executing pig detection, posture classification, and tail detection
+        in sequence. Optionally filters out lying pigs based on posture classification before tail detection.
 
         Args:
-            x (Tensor): Input image tensor.
+            x (Tensor): The input image tensor.
 
         Returns:
-            Tuple[List[Dict], Tensor, List[Dict]]: Pig detection outputs, posture classification outputs,
-                                                and tail detection outputs.
-        '''
+            Tuple[List[Dict], Tensor, List[Dict]]: A tuple containing lists of pig detection results, posture classification
+            results, and tail detection results, respectively.
+        """
         with torch.no_grad():
             # Pig detection
             pig_detection_outputs = self.pig_detection(x, verbose=False)
@@ -163,20 +184,27 @@ class ModelPipeline(nn.Module):
 
 
 class ResizeAspectRatioPad(object):
-    '''
-    Resizes and pads images while maintaining the aspect ratio.
-    This class is used as a transformation for resizing and padding images to a specific size.
-    It ensures that the aspect ratio of the original image is preserved while resizing and padding.
+    """
+    Transformation class for resizing and padding images to a specified size while maintaining the original aspect ratio.
+
+    This class ensures that images are processed in a uniform size for model input, using padding as necessary to
+    preserve aspect ratio, which is critical for maintaining image integrity during analysis.
 
     Args:
-        img_size (int): The desired size (width and height) for the output image.
+        img_size (int): Desired size (width and height) for the output image after resizing and padding.
 
-    Example usage:
+    Example:
         resize_transform = ResizeAspectRatioPad(img_size=224)
-        output_image = resize_transform(input_image)
-    '''
+        transformed_image = resize_transform(original_image)
+    """
 
     def __init__(self, img_size):
+        """
+        Initializes the ResizeAspectRatioPad transformation with the specified target image size.
+
+        Args:
+            img_size (int): The target size for both width and height of the image after transformation.
+        """
         self.img_size = img_size
 
     def resize_and_pad(self, img, min_size=None):
@@ -207,5 +235,14 @@ class ResizeAspectRatioPad(object):
         return img
 
     def __call__(self, img):
+        """
+        Applies the resizing and padding transformation to an input image, maintaining aspect ratio.
+
+        Args:
+            img (PIL Image): The input image to be resized and padded.
+
+        Returns:
+            PIL Image: The transformed image with maintained aspect ratio, resized and padded to the target size.
+        """
         img = self.resize_and_pad(img, min_size=self.img_size)
         return img

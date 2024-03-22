@@ -134,7 +134,7 @@ def analyze_video(video_path, image_preprocessor, model_pipeline, activity_analy
     Analyzes a single video file using the given model pipeline, activity analyzer, tail detection processor, and logger.
 
     The function reads the video file frame by frame. For each frame, it performs model inference, processes tail detections,
-    calculates activity, and logs results. The loop stops after processing 100 frames.
+    calculates activity, and logs results.
 
     Args:
         video_path (str): The path to the video file to be analyzed.

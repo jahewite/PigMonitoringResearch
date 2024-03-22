@@ -11,6 +11,31 @@ from pipeline.utils.general import load_label_file, save_array_as_image, load_js
 
 
 def main():
+    """
+    Performs inference on a single image using a model pipeline that integrates pig detection,
+    posture classification, and tail detection. This script is designed to be run from the command line,
+    allowing users to specify an image for analysis, whether to filter lying pigs during the analysis,
+    and an optional prefix for image preprocessing.
+
+    The pipeline processes the specified image to detect pigs, classify their postures (lying or not lying),
+    and detect tail positions (upright or hanging). The results are then plotted and saved to a specified directory.
+
+    Command Line Arguments:
+        path_to_image (str): Path to the image file for analysis.
+        --filter_lying_pigs (flag): Optional flag to filter out lying pigs from the tail detection analysis.
+        --prefix (str): Optional prefix to specify for image preprocessing, which can influence the configuration used.
+
+    The script initializes necessary components, including model pipeline, image preprocessor, and tail detection processor,
+    based on configurations loaded from a JSON file. It then loads the image, performs the inference, processes the tail detections,
+    plots the results with detected positions and postures annotated, and saves the annotated image.
+
+    Example Usage:
+        python script_name.py /path/to/image.jpg --filter_lying_pigs --prefix camera1
+
+    Note:
+        This function is intended to be used as the entry point of the script when run from the command line.
+        It requires the 'path_to_image' argument to specify the image for analysis.
+    """
 
     # Initialize argument parser
     parser = argparse.ArgumentParser(
