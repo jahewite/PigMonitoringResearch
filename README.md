@@ -50,9 +50,9 @@ pip install -r requirements.txt
   - Place the **posture_classification.pth** file in the 'assets/models/classification/posture_classification/efficientnetv2' directory.
   - Place the **pig_detection.pt** file in the 'assets/models/detection/pig_detection/yolo/pig_detection.pt' directory.
   - Place the **tail_posture_detection.pt** file in the 'assets/models/detection/tail_detection/yolo/tail_posture_detection.pt' directory.
-- **Test video clip**: Download the test video clip from here and place it in the 'assets/test_clips' directory.
+- **Test video clip**: Download the test video clip from [here](https://cloudstorage.uni-oldenburg.de/s/LWP4xM6RKxjakem) and place it in the 'assets/test_clips' directory.
 - **Pipeline result files**: Download the .csv files containing the pipeline results for each analyzed pen from [here](https://cloudstorage.uni-oldenburg.de/s/a9B9QgYxqx6zFwf) and place them in the 'pipeline_outputs/monitoring_pipeline/piglet_rearing' directory.
-- **Optional**: Download the aggregated pipeline results .csv files from [here](https://cloudstorage.uni-oldenburg.de/s/bnsFTT5MGk7eKCt) and place them in the 'pipeline_outputs/data_aggregation' directory for individual use.
+
 
 ### (Optional) Installing FFmpeg
 
