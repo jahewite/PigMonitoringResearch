@@ -99,14 +99,14 @@ The datasets include many different data sources. It contains iamges from:
 ### Pig detection dataset
 
 - Format: YOLO
-- Contents: Contains X images annotated with the class 'Pig'.
-- Purpose: Designed for detecting pigs within various environmental settings.
+- Contents: Contains 9.281 images annotated with the class 'Pig'.
+- Purpose: Detection and localization of pigs in images. Basline for subsequent pig posture and tail posture detections.
 
 ### Posture classification dataset
 
 - Format: Standard image classification format
-- Contents: Comprises X images classified into 'lying' and 'notLying'.
-- Purpose: Facilitates the classification of pig postures to distinguish between lying and not lying behaviors.
+- Contents: Comprises 90.048 images classified into 'lying' and 'notLying'.
+- Purpose: Classification of cropped pig detection images into 'lying' and 'notLying'
 
 ### Tail posture detection datasets
 
@@ -114,11 +114,11 @@ There are two datasets focused on the detection of pig tail postures, annotated 
 
 1. **Full Image Dataset**:
 - Format: YOLO
- - Contents: Includes X images where tail postures are annotated directly on the input images.
- - Purpose: Aims to identify tail postures within unaltered farm environment images.
+ - Contents: Includes 1.856 images where 'upright' and 'hanging' tail postures are annotated directly on the input images.
+ - Purpose: 'upright' and 'hanging' tail posture detection on unaltered images.
 1. **Cropped Pig Detections Dataset**:
 - Format: YOLO
- - Contents: Features X images of cropped pig detections, annotated for tail posture. These crops are derived using the pig detection model.
+ - Contents: Features 18.269 images of cropped pig detections, annotated for 'upright' and 'hanging' tail posture. These crops are derived using the pig detection model.
  - Purpose: Enhances the focus on tail postures by using cropped images that highlight the area of interest.
  - Additional Information: For detailed insights into the methodology behind cropped pig detections and tail posture annotation, refer to the research papers.
 
