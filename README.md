@@ -78,6 +78,11 @@ sudo apt-get install ffmpeg
 
 ## Example usage
 
+**Disclaimer:**
+This is research in progress. When applying the pipeline to your own image data, it may happen that the detections do not function optimally. In this case, it would be sensible to fine-tune the existing models to the new data by adding new annotated data to the dataset. The code is also not optimized, which can lead to varying execution times when it is used.
+
+To test the detection pipeline on a single image, take a look at the [inference_on_single_image.ipynb](data_exploration/inference_on_single_image.ipynb). You can also use the equivalent [inference_on_singly_image.py](pipeline/utils/inference_on_single_image.py) to test it from the command line.
+
 If downloaded, use the test clip for example usage. From the root directory, execute the following command:
 ```
 python3 -m pipeline.analyze_video --path_to_videos assets/test_clips/test_1.mp4
@@ -126,8 +131,8 @@ There are two datasets focused on the detection of pig tail postures, annotated 
 
 This project is licensed under multiple licenses:
 
-- The code is licensed under the GNU Affero General Public License version 3 (AGPL-3.0), as found in the [LICENSE_CODE.txt](./LICENSE_CODE.txt) file. The AGPL-3.0 license offers strong copyleft provisions, requiring that any modifications and derived works also be available under the same license, and extends these requirements to networked use of the software.
-- The dataset provided in this project is licensed under the Creative Commons Attribution-NonCommercial (CC BY-NC) license, as detailed in the [LICENSE_DATA](./LICENSE_DATA.txt) file. This license allows others to remix, tweak, and build upon the work non-commercially, as long as they credit the contributors and license their new creations under the identical terms.
+- The code is licensed under the GNU Affero General Public License version 3 (AGPL-3.0), as found in the [LICENSE_CODE.txt](./LICENSE_CODE.txt) file.
+- The dataset provided in this project is licensed under the Creative Commons Attribution-NonCommercial (CC BY-NC) license, as detailed in the [LICENSE_DATA](./LICENSE_DATA.txt) file.
 
 Please see the respective license files for more detailed information.
 
