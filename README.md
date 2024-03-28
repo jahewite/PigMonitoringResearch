@@ -6,7 +6,7 @@ This repository contains the code and associated materials for a series of publi
 - [Image-based Tail Posture Monitoring of Pigs](https://www.researchgate.net/publication/374156938_Image-based_Tail_Posture_Monitoring_of_Pigs)
 - [ECPLF Publication]
 
-It also includes links to the datasets and models cited in the publications. For details on data usage and restrictions, see the [License](#license) section. For a detailed description of the dataset, refer to the [Dataset](#dataset) section.
+It also includes links to the datasets and models cited in the publications. For details on data usage and restrictions, see the [License](#license) section. For a detailed description of the dataset, refer to the [Dataset](#datasets) section.
 
 Check out the [data exploration](data_exploration) directory for more details.
 
