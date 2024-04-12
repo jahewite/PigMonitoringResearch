@@ -46,7 +46,7 @@ pip install -r requirements.txt
 
 ### 3. Download necessary files
 
-- **Models**: Download the model files from [here](https://cloudstorage.uni-oldenburg.de/s/HMbifg6gtb8EaCY).
+- **Models**: Download the model files from [here](https://cloudstorage.uni-oldenburg.de/s/TA9zWsLc3Hby5Pp).
   - Place the **posture_classification.pth** file in the 'assets/models/classification/posture_classification/efficientnetv2' directory.
   - Place the **pig_detection.pt** file in the 'assets/models/detection/pig_detection/yolo/pig_detection.pt' directory.
   - Place the **tail_posture_detection.pt** file in the 'assets/models/detection/tail_detection/yolo/tail_posture_detection.pt' directory.
