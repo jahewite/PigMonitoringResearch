@@ -1,9 +1,11 @@
+from calendar import c
 import os
 import cv2
 import string
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
 
 from datetime import datetime
@@ -646,6 +648,9 @@ def shade_pre_outbreak_period(interpolated_data, culprit_removal_date, num_days,
     """
     if isinstance(culprit_removal_date, list) and len(culprit_removal_date) > 0:
         culprit_removal_date = culprit_removal_date[0]
+    
+    if culprit_removal_date == "Unknows":
+        pass
 
     if culprit_removal_date is not None:
         culprit_removal_datetime = pd.to_datetime(culprit_removal_date)
@@ -728,6 +733,9 @@ def analyze_tail_posture_changes(monitoring_result, json_path, ax=None, resample
 
     ax.plot(interpolated_data.index, interpolated_data['posture_diff'],
             label='Tail Posture Difference', color="black", linewidth=2)
+    
+    # Set the formatter for the x-axis to display dates as 'Month-Day'
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%m'))
 
     ax.fill_between(interpolated_data.index, interpolated_data['posture_diff'], 0,
                     where=(interpolated_data['posture_diff'] >= 0), color="grey", alpha=0.1)
@@ -788,7 +796,7 @@ def generate_tail_posture_subplots(pipeline_monitoring_results, defined_cameras,
     num_cameras = len(defined_cameras)
 
     fig, axs = plt.subplots(num_datespans, num_cameras, figsize=(
-        6 * num_cameras, 4 * num_datespans), squeeze=False)
+        6 * num_cameras, 3 * num_datespans), squeeze=False)
 
     # Adjust the fontsize here for the titles
     camera_title_fontsize = 16
@@ -863,6 +871,124 @@ def generate_tail_posture_subplots(pipeline_monitoring_results, defined_cameras,
     plt.tight_layout(rect=[0, 0, 1, 0.92])
 
     if save_path:
-        plt.savefig(save_path, dpi=600, bbox_inches='tight')
+        if not save_path.endswith('.pdf'):
+            save_path += '.pdf'
+        plt.savefig(save_path, format='pdf', bbox_inches='tight')
     else:
         plt.show()
+
+        import pandas as pd
+
+def tail_posture_changes_to_df(pipeline_monitoring_results, json_path, resample_freq="D", normalize=False, rolling_window=None, filter_cameras=None):
+    """
+    Analyzes tail posture changes from a set of monitoring results and returns the analysis as a pandas DataFrame.
+    
+    This function processes monitoring results related to tail posture, filtering for specific cameras if required, 
+    and calculates the difference in tail posture over time. It specifically looks for "tail biting" pens and 
+    calculates tail posture difference scores at the day of culprit removal and 7 days prior to it. Results for each 
+    camera are compiled into a DataFrame.
+    
+    Parameters:
+    - pipeline_monitoring_results (list): A list of dictionaries, where each dictionary contains monitoring results
+      for a camera. Each dictionary must have keys 'camera', 'date_span', and 'dataframes', where 'dataframes' is a list
+      of pandas DataFrames with columns including 'datetime', 'num_tails_hanging', and 'num_tail_detections'.
+    - json_path (str): Path to the JSON file containing metadata to determine pen type, culprit removal dates, and other 
+      relevant information.
+    - resample_freq (str, optional): Frequency for data resampling. Default is "D" for daily.
+    - normalize (bool, optional): If set to True, normalizes the tail posture data before plotting. Default is False.
+    - rolling_window (int or None, optional): Size of the rolling window to apply for a moving average calculation.
+      If None, no rolling average is applied. Default is None.
+    - filter_cameras (list of str or None, optional): A list of camera names to include in the analysis. If None, 
+      all cameras in the input data are included. Default is None.
+    
+    Returns:
+    - pandas.DataFrame: A DataFrame containing the analysis results. Columns include 'camera', 'date_span,culprit_removal_date', 
+      'score_at_removal', 'score_7_days_prior', 'num_tails_upright_at_removal', 'num_tails_hanging_at_removal', 
+      'num_tails_upright_7_days_prior', 'num_tails_hanging_7_days_prior', 'days_from_negative_posture_difference_to_culprit_removal'
+      Each row corresponds to a camera included 
+      in the analysis.
+    
+    Note:
+    - The function only includes pens identified as "tail biting" in the final DataFrame.
+    - If the score at the day of culprit removal is not available, the last available 'posture_diff' value is used.
+    """
+    results_to_save = []
+
+    for monitoring_result in pipeline_monitoring_results:
+        if filter_cameras is not None and monitoring_result['camera'] not in filter_cameras:
+            continue
+        
+        json_data = load_json_data(json_path)
+        pen_type, culprit_removal, _ = get_pen_info(monitoring_result['camera'], monitoring_result['date_span'], json_data)
+
+        if pen_type != "tail biting":
+            continue  # Process only "tail biting" pens
+
+        data_all = pd.concat(monitoring_result['dataframes'])
+        data_all["datetime"] = pd.to_datetime(data_all["datetime"])
+        data_all.set_index("datetime", inplace=True)
+
+        if normalize:
+            data_all["num_tails_hanging"] /= data_all["num_tail_detections"]
+            data_all["num_tails_upright"] /= data_all["num_tail_detections"]
+
+        avg_data = data_all.resample(resample_freq).mean()
+        avg_data['posture_diff'] = avg_data['num_tails_upright'] - avg_data['num_tails_hanging']
+
+        if rolling_window:
+            avg_data = avg_data.rolling(window=rolling_window).mean()
+
+        interpolated_data = avg_data.resample("H").interpolate(method='linear')
+
+        record = {
+            'camera': monitoring_result['camera'],
+            'date_span': monitoring_result['date_span'],
+            'culprit_removal_date': None,
+            'score_at_removal': None,
+            'score_7_days_prior': None,
+            'num_tails_upright_at_removal': None,  
+            'num_tails_hanging_at_removal': None,
+            'num_tails_upright_7_days_prior': None,
+            'num_tails_hanging_7_days_prior': None,
+            'days_from_negative_posture_difference_to_culprit_removal': None
+        }
+
+        if culprit_removal:
+            culprit_removal_date = pd.to_datetime(culprit_removal, format='%Y-%m-%d')
+
+            if isinstance(culprit_removal_date, pd.DatetimeIndex):
+                culprit_removal_date = culprit_removal_date[0]
+
+            record['culprit_removal_date'] = culprit_removal_date.strftime('%Y-%m-%d')
+
+            # Find the first day with a negative posture difference before the removal date
+            before_removal = interpolated_data[interpolated_data.index < culprit_removal_date]
+            first_negative_posture_diff = before_removal[before_removal['posture_diff'] < 0].first_valid_index()
+            # Calculate the day before first_negative_posture_diff
+            day_before_first_negative_posture_diff = first_negative_posture_diff - pd.Timedelta(days=1)
+
+            if first_negative_posture_diff is not None:
+                days_diff = (culprit_removal_date - day_before_first_negative_posture_diff).days
+                record['days_from_negative_posture_difference_to_culprit_removal'] = days_diff
+
+            if culprit_removal_date in interpolated_data.index:
+                record['score_at_removal'] = interpolated_data.loc[culprit_removal_date, 'posture_diff']
+                record['num_tails_upright_at_removal'] = interpolated_data.loc[culprit_removal_date, 'num_tails_upright']
+                record['num_tails_hanging_at_removal'] = interpolated_data.loc[culprit_removal_date, 'num_tails_hanging']
+            else:
+                last_valid_index = interpolated_data['posture_diff'].last_valid_index()
+                if last_valid_index is not None:
+                    record['score_at_removal'] = interpolated_data.loc[last_valid_index, 'posture_diff']
+                    # Assuming you want to capture these values only if the score_at_removal is available
+                    record['num_tails_upright_at_removal'] = interpolated_data.loc[last_valid_index, 'num_tails_upright']
+                    record['num_tails_hanging_at_removal'] = interpolated_data.loc[last_valid_index, 'num_tails_hanging']
+
+            seven_days_prior = culprit_removal_date - pd.Timedelta(days=7)
+            if seven_days_prior in interpolated_data.index:
+                record['score_7_days_prior'] = interpolated_data.loc[seven_days_prior, 'posture_diff']
+                record['num_tails_upright_7_days_prior'] = interpolated_data.loc[seven_days_prior, 'num_tails_upright']
+                record['num_tails_hanging_7_days_prior'] = interpolated_data.loc[seven_days_prior, 'num_tails_hanging']
+
+            results_to_save.append(record)
+    
+    return pd.DataFrame(results_to_save)
