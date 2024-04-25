@@ -22,7 +22,8 @@
         "camera": "Kamera1",
         "datespan": "220726_220831",
         "datespan_gt": "220725_220901",
-        "type": "control"
+        "type": "tail biting",
+        "culpritremoval": "2022-08-31"
     },
     {
         "camera": "Kamera1",
@@ -61,7 +62,8 @@
         "camera": "Kamera2",
         "datespan": "211227_220119",
         "datespan_gt": "211213_220120",
-        "type": "control"
+        "type": "tail biting",
+        "culpritremoval": "2022-01-19"
     },
     {
         "camera": "Kamera2",
@@ -96,7 +98,8 @@
         "camera": "Kamera2",
         "datespan": "221219_230125",
         "datespan_gt": "221219_230126",
-        "type": "control"
+        "type": "tail biting",
+        "culpritremoval": "2023-01-25"
     },
     {
         "camera": "Kamera2",
