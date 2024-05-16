@@ -10,6 +10,12 @@ It also includes links to the datasets and models cited in the publications. For
 
 Check out the [data exploration](data_exploration) directory for more details.
 
+## Tail Posture Monitoring Pipeline
+
+Below is the visualization of the Tail Posture Monitoring Pipeline:
+
+![Tail Posture Monitoring Pipeline](assets/figures/tail_posture_monitoring_pipeline.jpg)
+
 ## Prerequisites
 
 - Python 3.6 or higher
