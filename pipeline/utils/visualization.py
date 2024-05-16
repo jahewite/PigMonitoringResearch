@@ -4,11 +4,13 @@ import cv2
 import string
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
 
 from datetime import datetime
+from scipy.signal import find_peaks
 
 from pipeline.model_pipeline import ModelPipeline
 from pipeline.utils.path_manager import PathManager
@@ -199,6 +201,357 @@ def save_img_with_grid(frame, grid_info, output_dir, filename):
 
     # Save the image
     cv2.imwrite(filepath, img_with_grid)
+
+
+def analyze_activity_changes(monitoring_result, json_path, ax=None, resample_freq="D", normalize=True, add_labels=True, rolling_window=None, fix_y_axis_max=False, save_path=None):
+    """
+    Plots the difference in monitored tail postures over specified intervals for a single monitoring result. The function
+    handles data normalization, applies a rolling average if specified, and performs linear interpolation on the data.
+    It also colors areas under the curve based on significant events related to tail biting, including pre-outbreak periods
+    as indicated by the culprit removal dates, if provided. The plot visually represents the change in tail posture behaviors
+    over time, highlighting critical pre-outbreak intervals (based on Larhmann et al. 2018).
+
+    Parameters:
+    - monitoring_result (dict): Contains camera, date_span, data_paths, and dataframes with tail posture data.
+    - json_path (str): Path to the JSON file with metadata to determine pen type, culprit removal date as well as ground truth datespansee.
+    - resample_freq (str): Frequency for data resampling (default is "D" for daily).
+    - normalize (bool): If True, normalizes the tail posture data before plotting.
+    - rolling_window (int or None): Specifies the window size for rolling average calculation. If None, no rolling average is applied.
+    - fix_y_axis_max (bool): If True, fixes the y-axis maximum value to 1.
+    - save_path (str or None): If specified, saves the generated plot to the given path.
+
+    Returns:
+    None. A plot is displayed showing the tail posture difference over time, with additional visual cues for significant periods.
+    """
+
+    # If no axes are provided, create a new figure and axes
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(18, 6))
+
+    subtitle_fontsize = 12  # Adjust font size for subtitles
+    axis_label_fontsize = 11  # Adjust font size for axis labels
+    ticks_fontsize = 11  # Adjust font size for axis ticks
+
+    # Load JSON data from the file
+    json_data = load_json_data(json_path)
+
+    # Extracting pen info
+    pen_type, culprit_removal, datespan_gt = get_pen_info(
+        monitoring_result['camera'], monitoring_result['date_span'], json_data)
+
+    camera_label = monitoring_result['camera'].replace("Kamera", "Pen ")
+    formatted_datespan = format_datespan(monitoring_result['date_span'])
+    formatted_datespan_gt = format_datespan(datespan_gt)
+
+    # Concatenate dataframes from the dictionary
+    data_all = pd.concat(monitoring_result['dataframes'])
+
+    # Create a copy and set datetime index
+    data_all_copy = data_all.copy()
+    data_all_copy["datetime"] = pd.to_datetime(data_all_copy["datetime"])
+    data_all_copy.set_index("datetime", inplace=True)
+
+    avg_data = data_all_copy.resample(resample_freq).mean()
+
+    # Apply rolling/moving average if specified
+    if rolling_window:
+        avg_data = avg_data.rolling(window=rolling_window).mean()
+
+    # Normalize if the option is set
+    if normalize:
+        avg_data['activity'] = (avg_data['activity'] - avg_data['activity'].min()) / (
+            avg_data['activity'].max() - avg_data['activity'].min())
+
+    # Perform interpolation
+    interpolated_data = avg_data.resample("H").interpolate(method='linear')
+
+    ax.plot(interpolated_data.index, interpolated_data['activity'],
+            label='Activity', color="black", linewidth=2)
+
+    ax.fill_between(interpolated_data.index, interpolated_data['activity'], 0,
+                    where=(interpolated_data['activity'] >= 0), color="grey", alpha=0.1)
+
+    # Check if the pen type is "tail biting"
+    if pen_type == "tail biting":
+        plot_culprit_removal_dates(interpolated_data, culprit_removal, ax)
+
+    # shade the pre-outbreak period if the pen type is "tail biting" and culprit_removal is specified
+    if pen_type == "tail biting" and culprit_removal is not None:
+        # 7 days pre outbreak (Lahrmann et al. 2018)
+        shade_pre_outbreak_period(
+            interpolated_data, culprit_removal, 7, ax, color="orange", alpha=0.2)
+        # 3 days pre outbreak (Lahrmann et al. 2018)
+        shade_pre_outbreak_period(
+            interpolated_data, culprit_removal, 3, ax, color="red", alpha=0.2)
+
+    ax.set_title(f"{camera_label} | {pen_type} | Full Timespan: {formatted_datespan_gt} | Analyzed Timespan: {formatted_datespan}",
+                 fontsize=subtitle_fontsize)
+
+    if add_labels:
+        ax.set_xlabel('Date', fontsize=axis_label_fontsize)
+        ax.set_ylabel('Acticity', fontsize=axis_label_fontsize)
+
+    # Check if the y-axis max should be fixed
+    if fix_y_axis_max:
+        ax.set_ylim(top=0.95)  # Set the maximum y-axis value to 1
+
+    ax.tick_params(axis='x', labelrotation=45)
+    ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
+
+    if save_path:
+        plt.savefig(save_path, dpi=600, bbox_inches='tight')
+
+    # Remove plt.show() if ax is provided; it will be handled externally
+    if ax is None:
+        plt.show()
+
+def heatmap_average_activity(dataframes_list, resample_freq='10T', days_index=None, normalize=False,
+                             rolling_window=None, ewm_window=None, save_path=None):
+    """
+    Generates and displays a heatmap of average activity over specified intervals for selected days from multiple dataframes.
+
+    This function processes the provided dataframes by resampling, normalizing, and optionally applying rolling or exponential
+    weighted moving averages to smooth the data. The heatmap visualizes the activity levels over different times of the day
+    across multiple days.
+
+    Parameters:
+    - dataframes_list (list of pd.DataFrame): List of dataframes where each dataframe represents a day's data.
+    - resample_freq (str, optional): Resampling frequency for averaging the data over time intervals. Defaults to "10T" for 10-minute intervals.
+    - days_index (list of int, optional): Indices specifying which days from the list to plot. If None, plots all days provided in the dataframes_list.
+    - normalize (bool, optional): If True, normalizes the activity data to a range between 0 and 1.
+    - rolling_window (int, optional): Size of the rolling average window. If specified, applies a rolling average to the resampled data.
+    - ewm_window (int, optional): Size of the exponential weighted moving window. If specified, applies an exponential weighted mean to smooth the data.
+    - save_path (str, optional): File path where the generated heatmap will be saved. If not specified, the plot is not saved.
+
+    Returns:
+    None. A heatmap is displayed, and optionally saved to the specified path.
+
+    Side Effects:
+    - Displays a heatmap using matplotlib and seaborn.
+    - Optionally saves the heatmap to a file if a path is provided.
+    """
+
+    # If no specific index is provided, plot all days
+    if days_index is None:
+        days_index = range(len(dataframes_list))
+
+    # Select the dataframes based on the provided index
+    selected_dataframes = [dataframes_list[i] for i in days_index]
+
+    # Concatenate dataframes
+    data_all = pd.concat(selected_dataframes)
+
+    # Ensure 'datetime' is a datetime type and set it as the index (if it's not already)
+    data_all["datetime"] = pd.to_datetime(data_all["datetime"])
+    data_all.set_index("datetime", inplace=True)
+
+    # Resample data if a frequency is provided
+    if resample_freq:
+        avg_data = data_all.resample(resample_freq).mean()
+    else:
+        avg_data = data_all.copy()  # use raw data
+
+    # Apply rolling/moving average if specified
+    if rolling_window:
+        avg_data = avg_data.rolling(window=rolling_window).mean()
+
+    # Apply exponential moving average if specified
+    if ewm_window:
+        avg_data['activity'] = avg_data['activity'].ewm(span=ewm_window).mean()
+
+    # Normalize if specified
+    if normalize:
+        avg_data['activity'] = (avg_data['activity'] - avg_data['activity'].min()) / (
+            avg_data['activity'].max() - avg_data['activity'].min())
+
+    # Pivot the data for heatmap
+    # create a new column combining hour and minute
+    avg_data['hour_minute'] = avg_data.index.strftime('%H:%M')
+    avg_data['date'] = avg_data.index.date
+    heatmap_data = avg_data.pivot_table(
+        values='activity', index='date', columns='hour_minute')
+
+    # Convert resample_freq to a more readable format for the title
+    if resample_freq.endswith('T'):
+        interval = int(resample_freq[:-1])
+        if interval == 60:
+            readable_freq = '1 hour'
+        else:
+            readable_freq = f'{interval} min'
+    else:
+        readable_freq = resample_freq
+
+    # Plot heatmap
+    plt.figure(figsize=(15, 6))
+    ax = sns.heatmap(heatmap_data, cmap='viridis', annot=False, fmt=".2f",
+                     cbar_kws={'label': 'Activity Level',
+                               'orientation': 'vertical'},
+                     annot_kws={"size": 14})  # Adjust size for annotations font inside the heatmap cells
+
+    # Title and axis label modifications
+    plt.title(
+        f'Average Activity Across Days ({readable_freq} intervals)', fontsize=20)
+    plt.xlabel('Time', fontsize=18)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.ylabel('Date', fontsize=18)
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, format='svg', bbox_inches='tight')
+
+    plt.show()
+
+def plot_average_activity(dataframes_list, resample_freqs=None, days_index=None, normalize=False, rolling_window=None,
+                          ewm_window=None, save_path=None, with_pig_posture=False, show_peaks=False):
+    """
+    Plot the average activity from a list of dataframes containing time-stamped data.
+
+    This function processes and visualizes activity data by performing concatenation, resampling, normalization,
+    and rolling average or exponential weighted mean computations as specified. It supports plotting raw and
+    resampled data, optionally including pig posture data and marking peaks in activity.
+
+    Parameters:
+    - dataframes_list (list of pd.DataFrame): A list of dataframes each containing a 'datetime' column and other
+      activity-related columns.
+    - resample_freqs (list of str, optional): A list of strings denoting the resampling frequencies (e.g., 'D' for daily).
+      If None, plots raw data.
+    - days_index (list of int, optional): Indices of the days to plot. If None, all days are plotted.
+    - normalize (bool, optional): If True, normalize the activity data to a range of 0 to 1.
+    - rolling_window (int, optional): Window size for the rolling average. None if not used.
+    - ewm_window (int, optional): Span for exponential weighted mean calculation. None if not used.
+    - save_path (str, optional): Path to save the generated plot. If None, the plot is not saved.
+    - with_pig_posture (bool, optional): If True, includes pig posture data in the plot.
+    - show_peaks (bool, optional): If True, marks peaks in the activity data.
+
+    Returns:
+    None. Displays a plot and optionally saves it to a file.
+
+    Side Effects:
+    - A plot is displayed using matplotlib with optional saving to disk.
+    - Prints peak activity data points if show_peaks is True.
+    """
+
+    # Concatenate dataframes
+    data_all = pd.concat(dataframes_list)
+
+    # Ensure 'datetime' is a datetime type and set it as the index (if it's not already)
+    data_all["datetime"] = pd.to_datetime(data_all["datetime"])
+    data_all.set_index("datetime", inplace=True)
+
+    # When resample_freqs is None, set it to ['raw'] to denote raw data plotting
+    if resample_freqs is None:
+        resample_freqs = ['raw']
+
+    # Resample the data if required
+    if 'raw' not in resample_freqs:
+        data_all = data_all.resample(resample_freqs[0]).mean()
+
+    # Apply rolling/moving average if specified
+    if rolling_window:
+        data_all = data_all.rolling(window=rolling_window).mean()
+
+    if ewm_window:
+        data_all['activity'] = data_all['activity'].ewm(span=ewm_window).mean()
+
+    # Calculate the proportions
+    if normalize:
+        data_all['activity'] = (data_all['activity'] - data_all['activity'].min()) / (
+            data_all['activity'].max() - data_all['activity'].min())
+
+    # If no specific index is provided, plot all days
+    if days_index is None:
+        days_index = range(len(dataframes_list))
+
+    # Select the dataframes based on the provided index AFTER all calculations are done
+    selected_dataframes = [data_all[data_all.index.date ==
+                                    dataframes_list[i]["datetime"].iloc[0].date()] for i in days_index]
+
+    # Concatenate selected dataframes
+    avg_data_all = pd.concat(selected_dataframes)
+
+    # Create subplots based on the number of frequencies specified
+    fig, axes = plt.subplots(nrows=len(resample_freqs),
+                             ncols=1, figsize=(18, 6 * len(resample_freqs)))
+
+    # Determine columns to plot based on with_pig_posture
+    columns_to_plot = ['activity']
+    if with_pig_posture:
+        columns_to_plot.extend(['num_pigs_lying', 'num_pigs_notLying'])
+
+    # If there's only one frequency, make axes an array for consistent indexing
+    if len(resample_freqs) == 1:
+        axes = [axes]
+
+    # Get the unique dates for x-ticks
+    # unique_dates = avg_data_all.index.normalize().unique()[::3]
+
+    for i, freq in enumerate(resample_freqs):
+        # For raw data, use the avg_data_all directly
+        if freq == 'raw':
+            title_freq = "Raw Activity"
+            avg_data = avg_data_all.copy()
+        else:
+            if resample_freqs[i] == 'D':
+                title_freq = "Average Daily Activity"
+            elif resample_freqs[i] == 'H':
+                title_freq = "Average Hourly Activity"
+            elif resample_freqs[i] == 'T':
+                title_freq = "Average Minutly Activity"
+            avg_data = avg_data_all.copy()
+
+        # Creating a secondary y-axis if plotting with pig postures
+        if with_pig_posture:
+            ax2 = axes[i].twinx()
+            color_idx = 0
+            colors = ["green", "blue"]
+        else:
+            ax2 = None
+
+        # Plotting each column
+        for col in columns_to_plot:
+
+            # If this is the 'activity' column, and show_peaks is True, identify and mark peaks
+            if col == 'activity' and show_peaks:
+                peaks, _ = find_peaks(avg_data[col].values, prominence=0.3)
+                axes[i].plot(avg_data.index[peaks],
+                             avg_data[col].iloc[peaks], 'rx')
+
+                for peak in peaks:
+                    print(
+                        f"Highpoint Datetime: {avg_data.index[peak]}, Value: {avg_data[col].iloc[peak]}")
+
+                # Plotting data on the primary y-axis
+                axes[i].plot(avg_data.index, avg_data[col],
+                             linewidth="5", color="black", label="activity")
+            elif col == 'activity':
+                axes[i].plot(avg_data.index, avg_data[col],
+                             linewidth="5", color="black", label="activity")
+
+            # Handle the posture columns
+            if with_pig_posture and col in ['num_pigs_lying', 'num_pigs_notLying']:
+                ax2.plot(avg_data.index, avg_data[col], label=col)
+                ax2.legend(loc='upper right', fontsize=16)
+
+        # Add titles, legends, labels, etc.
+        axes[i].set_title(title_freq, fontsize=20)
+        axes[i].set_xlabel('Date', fontsize=18)
+        axes[i].set_ylabel('Activity Level', fontsize=16)
+        if ax2:
+            ax2.set_ylabel('Number of Pigs', fontsize=16)
+
+    # Common X label for the last subplot
+    axes[-1].set_xlabel('Date', fontsize=18)
+    plt.xticks(rotation=45, fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.tight_layout()  # Ensure the plots are spaced nicely
+
+    if save_path:
+        plt.savefig(save_path, dpi=600, bbox_inches='tight')
+
+    plt.show()
+
+
 
 # Data analysis (monitoring pipeline results)
 

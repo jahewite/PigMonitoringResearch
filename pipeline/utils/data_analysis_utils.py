@@ -181,7 +181,7 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
     # Convert JSON data to a searchable structure
     video_timeframes = {item["camera"] + "_" +
                         item["datespan"]: item for item in batch_info_data}
-
+    
     # Get all directories in the main directory (camera directories)
     camera_dirs = os.listdir(dir)
     if camera:
@@ -190,13 +190,11 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
 
     for camera_name in camera_dirs:
         camera_dir_path = os.path.join(dir, camera_name)
-
         # Check if it's a directory
         if os.path.isdir(camera_dir_path):
             # Get all directories in the camera directory (time-span directories)
             for date_span in os.listdir(camera_dir_path):
                 date_span_dir_path = os.path.join(camera_dir_path, date_span)
-
                 # Check if it's a directory
                 if os.path.isdir(date_span_dir_path):
                     camera_dict = {

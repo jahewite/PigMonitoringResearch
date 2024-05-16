@@ -6,9 +6,11 @@ This repository contains the code and associated materials for a series of publi
 - [Image-based Tail Posture Monitoring of Pigs](https://www.researchgate.net/publication/374156938_Image-based_Tail_Posture_Monitoring_of_Pigs)
 - [ECPLF Publication]
 
-It also includes links to the datasets and models cited in the publications. For details on data usage and restrictions, see the [License](#license) section. For a detailed description of the dataset, refer to the [Dataset](#datasets) section.
+It also includes links to the datasets and models cited in the publications. For details on data usage and restrictions, see the [License](#license) section. For a detailed description of the dataset, refer to the [Dataset](#datasets) section.Additionally, check out the [data exploration](data_exploration) directory for more details.
 
-Check out the [data exploration](data_exploration) directory for more details.
+The results in this repository were developed as part of the [DigiSchwein](https://www.lwk-niedersachsen.de/lwk/news/35309_DigiSchwein) project. Check out the [Acknowledgements](#Acknowledgements) section for more details.
+
+
 
 ## Tail Posture Monitoring Pipeline
 
@@ -141,6 +143,5 @@ This project is licensed under multiple licenses:
 - The dataset provided in this project is licensed under the Creative Commons Attribution-NonCommercial (CC BY-NC) license, as detailed in the [LICENSE_DATA](./LICENSE_DATA.txt) file.
 
 ## Acknowledgements
-This project was developed as part of the [DigiSchwein](https://www.lwk-niedersachsen.de/lwk/news/35309_DigiSchwein) project.
 
 The project is supported (was supported) by fundsof the Federal Ministry of Food and Agriculture (BMEL) based on a decision of the Parliament of theFederal Republic of Germany. The Federal Office for Agriculture and Food (BLE) provides (provided)coordinating support for digitalization in agriculture asfunding organization, grantnumber 28DE109A18.
