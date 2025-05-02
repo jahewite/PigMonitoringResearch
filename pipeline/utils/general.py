@@ -51,13 +51,13 @@ def load_json_data(file_path):
     Load data from a JSON file.
 
     Args:
-        file_path (str): The path to the JSON file to be loaded.
+    file_path (str): The path to the JSON file to be loaded.
 
     Returns:
-        dict: The data loaded from the JSON file.
+    dict: The data loaded from the JSON file.
 
     Raises:
-        SystemExit: If an error occurs while reading the file.
+    SystemExit: If an error occurs while reading the file.
     """
     try:
         with open(file_path, 'r') as file:
@@ -72,11 +72,11 @@ def save_json_data(file_path, data):
     Save data to a JSON file.
 
     Args:
-        file_path (str): The file path where the JSON data should be saved.
-        data (dict): The data to be saved as JSON.
+    file_path (str): The file path where the JSON data should be saved.
+    data (dict): The data to be saved as JSON.
 
     Raises:
-        SystemExit: If an error occurs while writing to the file.
+    SystemExit: If an error occurs while writing to the file.
     """
     try:
         with open(file_path, 'w') as file:
@@ -139,17 +139,13 @@ def save_array_as_image(array, file_path, uuid=False):
         img_name = os.path.join(file_path, file_name)
 
     # Create a plot with the array as an image
-    fig, ax = plt.subplots()
-    ax.imshow(array)
+    plt.imshow(array)
 
-    # remove axis
-    ax.axis('off')
+    # Remove the axis
+    plt.axis('off')
 
-    # Save the figure
-    fig.savefig(file_path, bbox_inches='tight', pad_inches=0, dpi=300)
-
-    # Close the figure to prevent it from displaying in the notebook
-    plt.close(fig)
+    # Save the image
+    plt.savefig(file_path, bbox_inches='tight', dpi=300, pad_inches=0)
 
 
 def get_all_camera_names(json_file_path):
@@ -157,10 +153,10 @@ def get_all_camera_names(json_file_path):
     Extracts 'camera' values from a JSON file.
 
     Parameters:
-        json_file_path (str): The file path of the JSON file.
+    - json_file_path (str): The file path of the JSON file.
 
     Returns:
-        list: A list of camera values.
+    - list: A list of camera values.
     """
     # Read and parse the JSON data from the file
     with open(json_file_path, 'r') as file:

@@ -22,8 +22,7 @@
         "camera": "Kamera1",
         "datespan": "220726_220831",
         "datespan_gt": "220725_220901",
-        "type": "tail biting",
-        "culpritremoval": "2022-08-31"
+        "type": "control"
     },
     {
         "camera": "Kamera1",
@@ -54,16 +53,13 @@
         "datespan": "230515_230620",
         "datespan_gt": "230515_230622",
         "type": "tail biting",
-        "culpritremoval": [
-            "2023-06-20"
-        ]
+        "culpritremoval": "2023-06-19"
     },
     {
         "camera": "Kamera2",
         "datespan": "211227_220119",
         "datespan_gt": "211213_220120",
-        "type": "tail biting",
-        "culpritremoval": "2022-01-19"
+        "type": "control"
     },
     {
         "camera": "Kamera2",
@@ -98,8 +94,7 @@
         "camera": "Kamera2",
         "datespan": "221219_230125",
         "datespan_gt": "221219_230126",
-        "type": "tail biting",
-        "culpritremoval": "2023-01-25"
+        "type": "control"
     },
     {
         "camera": "Kamera2",
@@ -315,8 +310,8 @@
         "datespan_gt": "221003_221110",
         "type": "tail biting",
         "culpritremoval": [
-            "2022-11-02",
-            "2022-11-03"
+            "2022-11-03",
+            "2022-11-04"
         ]
     },
     {
