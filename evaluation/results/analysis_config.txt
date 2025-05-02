@@ -1,0 +1,42 @@
+resample_freq: D
+normalize: True
+smoothing_method: rolling
+smoothing_strength: 3
+days_before_list: [1, 3, 5, 7]
+output_dir: results
+random_seed: 42
+confidence_level: 0.95
+interpolation_method: linear
+interpolation_order: 3
+max_allowed_consecutive_missing_days: 3
+max_allowed_missing_days_pct: 50.0
+analysis_window_days: [1, 3, 5, 7]
+significance_level: 0.05
+min_control_dates_threshold: 8
+control_date_margin: 5
+min_control_analysis_dates: 2
+control_samples_per_pen: 5
+comparison_metrics: ['value_at_removal', '1d_window_avg', '3d_window_avg', '5d_window_avg', '7d_window_avg', '1d_window_slope', '3d_window_slope', '5d_window_slope', '7d_window_slope', 'abs_change_1d', 'abs_change_3d', 'abs_change_5d', 'abs_change_7d']
+min_outbreaks_for_variation_analysis: 3
+variation_slope_quantile: 0.33
+variation_accel_quantile: 0.33
+variation_gradual_slope_diff: 0.05
+variation_erratic_slope_diff: 0.1
+component_analysis_window_days: 10
+component_timepoint_days: [0, 1, 3, 5, 7]
+figure_dpi: 600
+violin_width: 0.4
+variation_max_pens_plot: 6
+pre_outbreak_stats_filename: pre_outbreak_statistics_filtered.csv
+control_stats_filename: control_statistics.csv
+comparison_stats_filename: outbreak_vs_control_comparison.csv
+outbreak_patterns_filename: outbreak_patterns.csv
+pattern_stats_filename: pattern_statistics.csv
+posture_components_filename: posture_components.csv
+control_components_filename: control_posture_components.csv
+threshold_analysis_filename: monitoring_threshold_analysis.json
+viz_pre_outbreak_filename: descriptive_pre_outbreak_patterns.png
+viz_comparison_filename: outbreak_vs_control_comparison.png
+viz_variation_filename: individual_variation_analysis.png
+viz_components_filename: posture_component_analysis.png
+viz_completeness_filename: data_completeness_timeline.png

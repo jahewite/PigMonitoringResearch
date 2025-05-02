@@ -89,3 +89,7 @@ class PathManager:
             self.root_dir, 'assets/fattening_batch_timespans.json')
         self.path_to_test_clip = os.path.join(
             self.root_dir, 'assets/test_clips/test_1.mp4')
+        
+        # path to evaluation
+        self.path_to_evaluation_config = os.path.join(
+            self.root_dir, 'evaluation/config.json')

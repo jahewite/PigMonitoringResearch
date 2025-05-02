@@ -1,0 +1,233 @@
+================================================================================
+DESCRIPTIVE TAIL POSTURE ANALYSIS REPORT
+================================================================================
+
+DATASET INFORMATION
+--------------------------------------------------------------------------------
+Number of cameras found: 6
+Number of datespans loaded: 48
+Actual Date range: 2021-12-22 to 2023-06-22 (547 days)
+Reference Date range: 2021-12-13 to 2023-06-22 (556 days)
+Datespan Coverage Analysis:
+  - Average actual vs. reference coverage: 85.4%
+  - Range: 51.3% - 100.0%
+  - Full coverage (>99%): 14 datespans
+
+Pen Types Analysis:
+  - control: 23
+  - tail biting: 25
+  - Total Tail Biting Pens: 25
+  - Total Control Pens: 23
+
+Culprit Removal Analysis:
+  - Removal date span: 2022-01-19 to 2023-06-20 (517 days)
+  - Relative Position der Täterentfernungen innerhalb der Durchläufe:
+    * Sehr früh (0-20% des Durchlaufs): 0 Entfernungen (0.0% der Fälle)
+    * Früh (21-40% des Durchlaufs): 1 Entfernungen (2.9% der Fälle)
+    * Mitte (41-60% des Durchlaufs): 4 Entfernungen (11.4% der Fälle)
+    * Spät (61-80% des Durchlaufs): 7 Entfernungen (20.0% der Fälle)
+    * Sehr spät (81-100% des Durchlaufs): 23 Entfernungen (65.7% der Fälle)
+  - Statistik zur relativen Position der Täterentfernungen:
+    * Durchschnittliche Position: 86.2% des Durchlaufs
+    * Median-Position: 88.2% des Durchlaufs
+    * Früheste Entfernung: 35.1% des Durchlaufs
+    * Späteste Entfernung: 168.4% des Durchlaufs
+  - Schwanzbeißer pro Bucht:
+    * Insgesamt entfernte Schwanzbeißer: 35
+    * Durchschnitt: 1.4 Schwanzbeißer pro Bucht
+    * Spanne: 1-4 Schwanzbeißer pro Bucht
+    * Buchten mit mehreren Entfernungen: 8
+  - Quartalsweise Verteilung der Entfernungen:
+    * 2022Q1: 4 Entfernungen
+    * 2022Q2: 3 Entfernungen
+    * 2022Q3: 2 Entfernungen
+    * 2022Q4: 9 Entfernungen
+    * 2023Q1: 6 Entfernungen
+    * 2023Q2: 11 Entfernungen
+
+DATA QUALITY & PREPROCESSING
+--------------------------------------------------------------------------------
+
+Reference vs Actual Datespan Coverage:
+- Based on reference datespans (datespan_gt), overall 273 of 1872 expected days (14.6%) were missing due to datespan differences.
+- 214 days (13.2%) were missing within the actual collected datespans.
+- Durchschnittliche Anzahl fehlender Tage innerhalb der verfügbaren Zeitspannen: 4.5 Tage pro Zeitspanne
+  * Minimum: 0 Tage, Maximum: 25 Tage, Median: 1.0 Tage
+- Average number of missing days within available datespans: 4.5 days per datespan
+  * Minimum: 0 days, Maximum: 25 days, Median: 1.0 days
+- 34 camera/datespan combinations (70.8%) had incomplete coverage compared to their reference datespan.
+Total processed camera/datespan events: 48
+Missing Daily Files: 214 of 1623 expected days (13.19%) were missing source CSV files.
+  - Avg. missing raw seconds within loaded days: 1.39% (approx).
+  - Avg. missing resampled periods (D) before interpolation: 2.34%.
+  - Avg. max consecutive missing resampled periods: 0.7 days.
+Interpolation Method: 'linear' was used.
+Event Exclusion: 8 total event(s) excluded from analysis due to missing data:
+  - 3 event(s) with >3 consecutive missing D periods
+  - 5 event(s) with >50.0% of expected days missing
+
+DETAILED EXCLUSION REPORT
+--------------------------------------------------------------------------------
+
+Exclusions from Tail Biting Event Analysis:
+
+  Elements excluded due to consecutive missing periods:
+  - Pen 4 / 220510_220529 (tail biting): 4 consecutive missing periods (threshold: 3)
+  - Pen 5 / 230227_230406 (control): 6 consecutive missing periods (threshold: 3)
+  - Pen 6 / 230227_230406 (tail biting): 6 consecutive missing periods (threshold: 3)
+
+  Elements excluded due to excessive missing days percentage:
+  - Pen 1 / 220505_220530 (control): 96.2% missing days (threshold: 50.0%)
+  - Pen 2 / 220505_220530 (control): 92.3% missing days (threshold: 50.0%)
+  - Pen 3 / 220505_220529 (control): 96.0% missing days (threshold: 50.0%)
+  - Pen 5 / 220510_220529 (control): 85.0% missing days (threshold: 50.0%)
+  - Pen 6 / 220509_220530 (control): 95.5% missing days (threshold: 50.0%)
+
+  Elements excluded for other reasons:
+  - Pen 1 / 211228_220119 (control): Not a tail biting event or missing culprit removal info
+  - Pen 2 / 220725_220831 (control): Not a tail biting event or missing culprit removal info
+  - Pen 2 / 230227_230405 (control): Not a tail biting event or missing culprit removal info
+  - Pen 3 / 211222_220119 (control): Not a tail biting event or missing culprit removal info
+  - Pen 3 / 220725_220905 (control): Not a tail biting event or missing culprit removal info
+  - Pen 3 / 221219_230125 (control): Not a tail biting event or missing culprit removal info
+  - Pen 3 / 230227_230406 (control): Not a tail biting event or missing culprit removal info
+  - Pen 4 / 211229_220119 (control): Not a tail biting event or missing culprit removal info
+  - Pen 4 / 220228_220407 (control): Not a tail biting event or missing culprit removal info
+  - Pen 4 / 220725_220905 (control): Not a tail biting event or missing culprit removal info
+  - Pen 5 / 211231_220119 (control): Not a tail biting event or missing culprit removal info
+  - Pen 5 / 220228_220407 (control): Not a tail biting event or missing culprit removal info
+  - Pen 5 / 221219_230126 (control): Not a tail biting event or missing culprit removal info
+  - Pen 6 / 211230_220120 (control): Not a tail biting event or missing culprit removal info
+  - Pen 6 / 220228_220407 (control): Not a tail biting event or missing culprit removal info
+  - Pen 6 / 220725_220905 (control): Not a tail biting event or missing culprit removal info
+  - Pen 6 / 221219_230126 (control): Not a tail biting event or missing culprit removal info
+
+Exclusions from Control Pen Analysis:
+
+  Elements excluded due to consecutive missing periods:
+  - Pen 5 / 230227_230406 (control): 6 consecutive missing periods (threshold: 3)
+
+  Elements excluded due to excessive missing days percentage:
+  - Pen 1 / 220505_220530 (control): 96.2% missing days (threshold: 50.0%)
+  - Pen 2 / 220505_220530 (control): 92.3% missing days (threshold: 50.0%)
+  - Pen 3 / 220505_220529 (control): 96.0% missing days (threshold: 50.0%)
+  - Pen 5 / 220510_220529 (control): 85.0% missing days (threshold: 50.0%)
+  - Pen 6 / 220509_220530 (control): 95.5% missing days (threshold: 50.0%)
+
+DESCRIPTIVE PRE-OUTBREAK ANALYSIS
+--------------------------------------------------------------------------------
+Number of outbreaks analyzed: 23 from 6 pens.
+
+Posture Difference Statistics (Value):
+  - At Removal (N=23): Mean=0.032, Median=-0.043, Std=0.382, P25=-0.264, P10=-0.398
+  - 1d Before : Mean=0.123, Median=0.140, Std=0.377
+  - 3d Before : Mean=0.370, Median=0.463, Std=0.378
+  - 7d Before : Mean=0.670, Median=0.722, Std=0.171
+
+Change Statistics (Relative to Removal):
+  Absolute Change:
+    - 1d Window: Mean=-0.091, Median=-0.031, Std=0.124
+    - 3d Window: Mean=-0.338, Median=-0.274, Std=0.352
+    - 7d Window: Mean=-0.638, Median=-0.625, Std=0.380
+  Percentage Change:
+    - 1d Window: Mean=-53.4%, Median=-11.7%, Std=78.5%
+    - 3d Window: Mean=-89.9%, Median=-68.3%, Std=101.9%
+    - 7d Window: Mean=-136.3%, Median=-200.0%, Std=75.4%
+
+Window Slope Statistics (Ending at Removal):
+  - 3-Day Window: Mean Slope=-0.116 (100.0% significant at p<0.05), Median=-0.098, Std=0.122
+  - 7-Day Window: Mean Slope=-0.099 (100.0% significant at p<0.05), Median=-0.096, Std=0.063
+  Window Average (Value):
+    - 3-Day Window: Mean Avg=0.190, Median=0.205, Std=0.357
+    - 7-Day Window: Mean Avg=0.395, Median=0.392, Std=0.280
+
+*See 'descriptive_pre_outbreak_patterns.png' for visualization.*
+
+CONTROL COMPARISON ANALYSIS
+--------------------------------------------------------------------------------
+Control data analyzed: 6 pens with 85 reference points.
+
+Significant Differences Between Tail Biting and Control Pens:
+  - Value at Removal: TB=0.032±0.382, Control=0.752±0.107, p=0.0000, large effect size (3.63)
+  - 1d_window_avg: TB=0.076±0.374, Control=0.753±0.101, p=0.0000, large effect size (3.51)
+  - 3d Window Average: TB=0.190±0.357, Control=0.753±0.095, p=0.0000, large effect size (3.07)
+  - 5d_window_avg: TB=0.303±0.327, Control=0.749±0.094, p=0.0000, large effect size (2.61)
+  - 7d Window Average: TB=0.395±0.280, Control=0.745±0.097, p=0.0000, large effect size (2.28)
+  - 1d_window_slope: TB=-0.091±0.124, Control=-0.003±0.036, p=0.0028, large effect size (1.36)
+  - 3d Window Slope: TB=-0.116±0.122, Control=0.001±0.027, p=0.0000, large effect size (1.94)
+  - 5d_window_slope: TB=-0.113±0.090, Control=0.003±0.020, p=0.0000, large effect size (2.61)
+  - 7d Window Slope: TB=-0.099±0.063, Control=0.004±0.017, p=0.0000, large effect size (3.17)
+  - 1d Absolute Change: TB=-0.091±0.124, Control=-0.003±0.036, p=0.0028, large effect size (1.36)
+  - 3d Absolute Change: TB=-0.338±0.352, Control=0.003±0.079, p=0.0000, large effect size (1.95)
+  - abs_change_5d: TB=-0.533±0.383, Control=0.011±0.095, p=0.0000, large effect size (2.81)
+  - 7d Absolute Change: TB=-0.638±0.380, Control=0.024±0.120, p=0.0000, large effect size (3.20)
+
+*See 'outbreak_vs_control_comparison.png' for detailed visualizations.*
+
+INDIVIDUAL VARIATION ANALYSIS
+--------------------------------------------------------------------------------
+Pattern Distribution in Outbreak Events:
+  - Gradual-decline: 9 outbreaks (39.1%)
+  - Sudden-decline: 6 outbreaks (26.1%)
+  - Moderate-decline: 5 outbreaks (21.7%)
+  - Erratic-decline: 3 outbreaks (13.0%)
+
+Pen Consistency: 0/6 pens (0.0%) show consistent pattern categories across multiple outbreaks.
+
+Key Metrics by Pattern Category:
+  - Gradual-decline (n=9):
+    * Value at removal: 0.114
+    * 7-day change: -0.508
+    * 7-day slope: -0.081
+    * 3-day slope: -0.072
+  - Sudden-decline (n=6):
+    * Value at removal: -0.155
+    * 7-day change: -0.884
+    * 7-day slope: -0.123
+    * 3-day slope: -0.263
+  - Moderate-decline (n=5):
+    * Value at removal: 0.293
+    * 7-day change: -0.449
+    * 7-day slope: -0.077
+    * 3-day slope: -0.100
+  - Erratic-decline (n=3):
+    * Value at removal: -0.274
+    * 7-day change: -0.852
+    * 7-day slope: -0.138
+    * 3-day slope: 0.017
+
+*See 'individual_variation_analysis.png' for detailed visualizations.*
+
+POSTURE COMPONENT ANALYSIS
+--------------------------------------------------------------------------------
+Component Values at Key Timepoints:
+  - Removal Day:
+    * Upright Tails: 0.516 ± 0.191
+    * Hanging Tails: 0.484 ± 0.191
+    * Posture Diff:  0.032 ± 0.382
+  - 3 Days Before Removal:
+    * Upright Tails: 0.685 ± 0.189
+    * Hanging Tails: 0.315 ± 0.189
+    * Posture Diff:  0.370 ± 0.378
+  - 7 Days Before Removal:
+    * Upright Tails: 0.835 ± 0.086
+    * Hanging Tails: 0.165 ± 0.086
+    * Posture Diff:  0.670 ± 0.171
+
+Component Changes (Removal vs. Earlier Timepoints):
+  - 7-Day Window: Upright tails decrease by 0.319, Hanging tails increase by 0.319
+  - 3-Day Window: Upright tails decrease by 0.169, Hanging tails increase by 0.169
+
+Component Contributions to 7-Day Posture Difference Change:
+  - Primary driver: Hanging tail posture changes
+  - Upright tails contribution: -50.0%
+  - Hanging tails contribution: -50.0%
+
+*See 'posture_component_analysis.png' for detailed visualizations.*
+
+MONITORING THRESHOLD ANALYSIS
+--------------------------------------------------------------------------------
+No monitoring threshold analysis available.
+
+GENERAL OBSERVATIONS & RECOMMENDATIONS
+--------------------------------------------------------------------------------
