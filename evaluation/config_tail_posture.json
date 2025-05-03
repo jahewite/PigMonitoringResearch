@@ -1,5 +1,5 @@
 {
-    "output_dir": "results",
+    "output_dir": "results_tail_posture_evaluation",
     "random_seed": 42,
     "resample_freq": "D",
     "normalize": true,

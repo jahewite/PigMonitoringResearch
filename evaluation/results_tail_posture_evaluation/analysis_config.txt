@@ -3,7 +3,7 @@ normalize: True
 smoothing_method: rolling
 smoothing_strength: 3
 days_before_list: [1, 3, 5, 7]
-output_dir: results
+output_dir: results_tail_posture_evaluation
 random_seed: 42
 confidence_level: 0.95
 interpolation_method: linear
