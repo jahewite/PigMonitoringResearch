@@ -1,0 +1,39 @@
+Metric,Value
+dataset_info_outbreak_patterns_count,20
+dataset_info_outbreak_patterns_pens,6
+dataset_info_outbreak_patterns_pattern_categories,"['Gleichmäßige Abnahme', 'Steile Abnahme', 'Stabil']"
+pattern_distribution_Gleichmäßige Abnahme,11
+pattern_distribution_Steile Abnahme,5
+pattern_distribution_Stabil,4
+pen_consistency_pens_with_multiple,6
+pen_consistency_pens_consistent,1
+pen_consistency_consistency_percentage,16.666666666666664
+visualization_data_panel_a_plotted,True
+visualization_data_panel_a_patterns_Steile Abnahme_count,5
+visualization_data_panel_a_patterns_Steile Abnahme_color,#808080
+visualization_data_panel_a_patterns_Gleichmäßige Abnahme_count,11
+visualization_data_panel_a_patterns_Gleichmäßige Abnahme_color,#377EB8
+visualization_data_panel_a_patterns_Stabil_count,4
+visualization_data_panel_a_patterns_Stabil_color,#1B9E77
+visualization_data_panel_b_plotted,True
+visualization_data_panel_b_avg_trajectories_Steile Abnahme_days,"[-7, -5, -3, -1, 0]"
+visualization_data_panel_b_avg_trajectories_Steile Abnahme_avg_values,"[0.7779277080416839, 0.7809044548970918, 0.6069426873842783, 0.053335262007282114, -0.2094341890634642]"
+visualization_data_panel_b_avg_trajectories_Steile Abnahme_std_values,"[0.049669713568319236, 0.04991880132444752, 0.16872908240488987, 0.2415514519170044, 0.16881244076914256]"
+visualization_data_panel_b_avg_trajectories_Steile Abnahme_n_points,"[5, 5, 5, 5, 5]"
+visualization_data_panel_b_avg_trajectories_Steile Abnahme_total_outbreaks,5
+visualization_data_panel_b_avg_trajectories_Gleichmäßige Abnahme_days,"[-7, -5, -3, -1, 0]"
+visualization_data_panel_b_avg_trajectories_Gleichmäßige Abnahme_avg_values,"[0.6124356591659514, 0.42726481787452175, 0.18890283955962428, -0.06887867723738475, -0.1581798538798995]"
+visualization_data_panel_b_avg_trajectories_Gleichmäßige Abnahme_std_values,"[0.2107868971942121, 0.3074932393549641, 0.42895558736443823, 0.34182176029785344, 0.2817734099924125]"
+visualization_data_panel_b_avg_trajectories_Gleichmäßige Abnahme_n_points,"[11, 11, 11, 11, 11]"
+visualization_data_panel_b_avg_trajectories_Gleichmäßige Abnahme_total_outbreaks,11
+visualization_data_panel_b_avg_trajectories_Stabil_days,"[-7, -5, -3, -1, 0]"
+visualization_data_panel_b_avg_trajectories_Stabil_avg_values,"[0.7260020949398791, 0.6574090612217305, 0.5830430703608749, 0.5499836669176824, 0.5164599839690786]"
+visualization_data_panel_b_avg_trajectories_Stabil_std_values,"[0.14252374881482624, 0.2367822773052316, 0.29088818675733963, 0.24755610298481445, 0.19210493019561797]"
+visualization_data_panel_b_avg_trajectories_Stabil_n_points,"[4, 4, 4, 4, 4]"
+visualization_data_panel_b_avg_trajectories_Stabil_total_outbreaks,4
+visualization_data_panel_c_pattern_counts_Gleichmäßige Abnahme,11
+visualization_data_panel_c_pattern_counts_Steile Abnahme,5
+visualization_data_panel_c_pattern_counts_Stabil,4
+visualization_data_panel_c_pen_consistency_pens_with_multiple,6
+visualization_data_panel_c_pen_consistency_pens_consistent,1
+visualization_data_panel_c_pen_consistency_consistency_percentage,16.666666666666664

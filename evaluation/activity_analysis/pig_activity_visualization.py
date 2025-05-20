@@ -5,10 +5,12 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
-from matplotlib.colors import LinearSegmentedColormap
 import logging
+import warnings
 
-from evaluation.tail_posture_analysis.utils import set_plotting_style, lighten_color, COLORS
+warnings.filterwarnings("ignore", message="The handle .* has a label of '_child.*' which cannot be automatically added to the legend.")
+
+from evaluation.utils.utils import set_plotting_style, lighten_color, COLORS
 from evaluation.activity_analysis.pig_activity_analyzer import PigBehaviorAnalyzer
 
 class PigBehaviorVisualizer(PigBehaviorAnalyzer):
@@ -16,26 +18,24 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
     
     def __init__(self, *args, **kwargs):
         # Ensure logger is initialized in the base class or here
-        super().__init__(*args, **kwargs)  # Call parent __init__
-        if not hasattr(self, 'logger'):  # If logger wasn't set by parent
+        super().__init__(*args, **kwargs)
+        if not hasattr(self, 'logger'):
             self.logger = logging.getLogger(__name__)
-            if not self.logger.hasHandlers():  # Basic config if no handlers attached
+            if not self.logger.hasHandlers():
                 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         # Set the style upon instantiation
         set_plotting_style(self.config)
-        self.logger.info("Dissertation quality plotting style set for behavior visualization.")
+        self.logger.info("Plotting style set for behavior visualization.")
         
         if not hasattr(self, 'behavior_metrics'):
             self.behavior_metrics = ['num_pigs_lying', 'num_pigs_notLying', 'activity']
 
-        # Updated metric_colors (only for activity)
         self.metric_colors = {
             'num_pigs_lying': COLORS.get('lying', '#1f77b4'),
             'num_pigs_notLying': COLORS.get('primary_metric', '#ff7f0e'),
             'activity': COLORS.get('activity', '#2ca02c')
         }
 
-        # Updated metric_display_names
         self.metric_display_names = {
             'num_pigs_lying': 'Anzahl liegender Schweine',
             'num_pigs_notLying': 'Anzahl nicht liegender Schweine',
@@ -44,65 +44,61 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
     
     def _style_violin_box(self, ax, data, labels, violin_color, box_color, scatter_color, violin_width=0.6):
         """Helper to style combined violin and box plots (Dissertation Quality)."""
-        if not data or all(d.empty for d in data):  # Check if all data series are empty
+        if not data or all(d.empty for d in data):
             ax.text(0.5, 0.5, 'No Data', ha='center', va='center', color=COLORS['annotation'], fontsize=plt.rcParams['font.size'])
             return  # No data to plot
 
         try:
-            # Violin Plot - Lighter fill, slightly darker edge
-            parts = ax.violinplot(data, showmeans=False, showmedians=False, widths=violin_width)  # Mean/Median handled by boxplot
+            parts = ax.violinplot(data, showmeans=False, showmedians=False, widths=violin_width)
             for pc in parts['bodies']:
-                pc.set_facecolor(lighten_color(violin_color, 0.7))  # More lightening for fill
-                pc.set_edgecolor(violin_color)  # Use main color for edge
-                pc.set_alpha(0.9)  # Slightly less transparent
-                pc.set_linewidth(0.8)  # Thin edge
+                pc.set_facecolor(lighten_color(violin_color, 0.7))
+                pc.set_edgecolor(violin_color)
+                pc.set_alpha(0.9)
+                pc.set_linewidth(0.8)
 
             # Explicitly set colors/alphas based on input parameters for box fill
-            bplot = ax.boxplot(data, labels=labels, patch_artist=True, showfliers=False,  # Flier handling in rcParams
-                               showmeans=True,  # Use rcParams setting
-                               widths=violin_width * 0.3,  # Narrower box inside violin
-                               positions=np.arange(1, len(data) + 1))  # Ensure positions match violin
+            bplot = ax.boxplot(data, labels=labels, patch_artist=True, showfliers=False,
+                               showmeans=True,
+                               widths=violin_width * 0.3,
+                               positions=np.arange(1, len(data) + 1))
 
             for patch in bplot['boxes']:
-                patch.set_facecolor(lighten_color(box_color, 0.5))  # Light fill for box
+                patch.set_facecolor(lighten_color(box_color, 0.5))
                 patch.set_alpha(0.85)
-                patch.set_edgecolor(box_color)  # Main color for edge
-                patch.set_linewidth(plt.rcParams['boxplot.boxprops.linewidth'])  # Use rcParams linewidth
-            # Use rcParams for whiskers and caps styling
+                patch.set_edgecolor(box_color)
+                patch.set_linewidth(plt.rcParams['boxplot.boxprops.linewidth'])
             for whisker in bplot['whiskers']:
-                whisker.set(color=plt.rcParams['axes.edgecolor'],  # Match axes edge color
+                whisker.set(color=plt.rcParams['axes.edgecolor'],
                            linewidth=plt.rcParams['boxplot.whiskerprops.linewidth'],
                            linestyle=plt.rcParams['boxplot.whiskerprops.linestyle'])
             for cap in bplot['caps']:
                 cap.set(color=plt.rcParams['axes.edgecolor'],
                         linewidth=plt.rcParams['boxplot.capprops.linewidth'])
 
-            # Scatter Plot (Jitter) - Smaller, more transparent points
             for i, d in enumerate(data):
-                if d is not None and not d.empty:  # Check d is not None
-                    x_jitter = np.random.normal(i + 1, 0.025, size=len(d))  # Smaller jitter spread
-                    ax.scatter(x_jitter, d, alpha=0.3, s=10, color=scatter_color,  # Smaller size, lower alpha
-                               edgecolor='none', zorder=3)  # No edges for less clutter
+                if d is not None and not d.empty:
+                    x_jitter = np.random.normal(i + 1, 0.025, size=len(d))
+                    ax.scatter(x_jitter, d, alpha=0.3, s=10, color=scatter_color,
+                               edgecolor='none', zorder=3)
         except Exception as e:
             self.logger.error(f"Error styling violin/box plot: {e}", exc_info=True)
             ax.text(0.5, 0.5, 'Plotting Error', ha='center', va='center', color='red')
 
     def _style_boxplot(self, ax, data, labels, colors, show_scatter=True, scatter_alpha=0.3, widths=0.6):
         """Helper to style box plots consistently (Dissertation Quality). Returns the boxplot dictionary."""
-        if not data or all(d is None or len(d) == 0 for d in data):  # Check if data is empty or contains only empty lists/None
+        if not data or all(d is None or len(d) == 0 for d in data):
             ax.text(0.5, 0.5, 'No Data', ha='center', va='center', color=COLORS['annotation'], fontsize=plt.rcParams['font.size'])
-            return None  # Return None if no data
+            return None
 
-        # Use rcParams for median/mean properties directly
-        bp = ax.boxplot(data, labels=labels, patch_artist=True, showfliers=False,  # Flier handling in rcParams
-                        showmeans=True,  # Use rcParams setting
+        bp = ax.boxplot(data, labels=labels, patch_artist=True, showfliers=False,
+                        showmeans=True,
                         widths=widths)
 
         # Style boxes, whiskers, caps
         for i, box in enumerate(bp['boxes']):
             box_color = colors[i % len(colors)]
-            box.set_facecolor(lighten_color(box_color, 0.6))  # Lighter fill
-            box.set_edgecolor(box_color)  # Main color edge
+            box.set_facecolor(lighten_color(box_color, 0.6))
+            box.set_edgecolor(box_color)
             box.set_alpha(0.85)
             box.set_linewidth(plt.rcParams['boxplot.boxprops.linewidth'])
 
@@ -116,24 +112,24 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
 
         if show_scatter:
             for i, d in enumerate(data):
-                if d is not None and len(d) > 0:  # Check d is not None
+                if d is not None and len(d) > 0:
                     scatter_color = colors[i % len(colors)]
-                    x_jitter = np.random.normal(i + 1, 0.03, size=len(d))  # Slightly tighter jitter
-                    ax.scatter(x_jitter, d, alpha=scatter_alpha, s=10, color=scatter_color,  # Smaller dots
-                               edgecolor='none', zorder=3)  # No edges
+                    x_jitter = np.random.normal(i + 1, 0.03, size=len(d))
+                    ax.scatter(x_jitter, d, alpha=scatter_alpha, s=10, color=scatter_color,
+                               edgecolor='none', zorder=3)
 
         return bp
 
     def _add_stats_annotation(self, ax, text, loc='upper right', fontsize=None, **kwargs):
         """Helper to add standardized statistics box (Dissertation Quality)."""
         if fontsize is None:
-            fontsize = plt.rcParams['legend.fontsize']  # Use legend font size from rcParams
+            fontsize = plt.rcParams['legend.fontsize']
 
         # Slightly cleaner bbox
-        bbox_props = dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9,  # Higher alpha
-                          edgecolor='#CCCCCC', linewidth=0.5)  # Lighter edge
+        bbox_props = dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9,
+                          edgecolor='#CCCCCC', linewidth=0.5)
 
-        # Default location settings remain the same
+        # Default location settings
         loc_params = {
             'upper right': {'x': 0.98, 'y': 0.98, 'ha': 'right', 'va': 'top'},
             'upper left': {'x': 0.02, 'y': 0.98, 'ha': 'left', 'va': 'top'},
@@ -146,7 +142,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
 
         ax.text(params['x'], params['y'], text, transform=ax.transAxes,
                 fontsize=fontsize, va=params['va'], ha=params['ha'], linespacing=1.4,
-                color=plt.rcParams['text.color'],  # Use default text color
+                color=plt.rcParams['text.color'],
                 bbox=bbox_props)
     
     def visualize_behavior_metrics(self, metric=None, save_path=None):
@@ -171,7 +167,6 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                 self.logger.warning(f"Unknown metric: {current_metric}. Skipping visualization.")
                 continue
                 
-            # Check if we have data for this metric
             if current_metric not in self.pre_outbreak_stats or self.pre_outbreak_stats[current_metric].empty:
                 self.logger.warning(f"No pre-outbreak statistics available for {current_metric}. Skipping visualization.")
                 continue
@@ -196,7 +191,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
             
             # --- Panel A (Row 0, Col 0): Value Distributions ---
             ax0 = fig.add_subplot(gs[0, 0])
-            days_list = self.config.get('days_before_list', [7, 3, 1])  # Order for plotting
+            days_list = self.config.get('days_before_list', [7, 3, 1])
             data_to_plot = []
             labels = []
             
@@ -342,8 +337,8 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
             plot_cols = []
             plot_days = []
             
-            for col, day in sorted(traj_cols_ordered_map.items(), key=lambda item: item[1]):  # Sort by day (-10, -7, ..., 0)
-                if not self.pre_outbreak_stats[current_metric][col].isnull().all():  # Check if not all NaN
+            for col, day in sorted(traj_cols_ordered_map.items(), key=lambda item: item[1]):
+                if not self.pre_outbreak_stats[current_metric][col].isnull().all():
                     plot_cols.append(col)
                     plot_days.append(day)
                     # Add the data to trajectory_data for calculations
@@ -380,7 +375,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                     # Calculate 95% CI
                     ci_level = self.config.get('confidence_level', 0.95)
                     # Use T distribution for CI if N is small, otherwise Z
-                    if np.min(count_values_avg) < 30:  # Arbitrary threshold for T vs Z
+                    if np.min(count_values_avg) < 30:
                         t_crit = stats.t.ppf((1 + ci_level) / 2, df=count_values_avg - 1)
                         crit_val = t_crit
                     else:
@@ -391,14 +386,14 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                     upper = avg_values_avg + margin_of_error
                     lower = avg_values_avg - margin_of_error
                     
-                    ax3.fill_between(plot_days_avg, upper, lower, color=COLORS.get('critical', 'red'), alpha=0.15, zorder=9)
+                    ax3.fill_between(plot_days_avg, upper, lower, color=COLORS.get('critical', 'red'), alpha=0.15, zorder=9,)
                 
                 # Add legend for average line
                 legend_handles_traj = []
-                avg_line = ax3.get_lines()[-1]  # Get the average line handle
+                avg_line = ax3.get_lines()[-1]
                 legend_handles_traj.append(avg_line)
-                if len(ax3.collections) > 0:  # Check if CI fill exists
-                    ci_fill = ax3.collections[-1]  # Get the CI fill handle
+                if len(ax3.collections) > 0:
+                    ci_fill = ax3.collections[-1]
                     legend_handles_traj.append(ci_fill)
                     
                 ax3.legend(handles=legend_handles_traj, loc='best', frameon=True, facecolor='white', 
@@ -484,7 +479,6 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                 self.logger.warning(f"Unknown metric: {current_metric}. Skipping comparison visualization.")
                 continue
                 
-            # Check if we have data for this metric in both outbreak and control datasets
             if (current_metric not in self.pre_outbreak_stats or self.pre_outbreak_stats[current_metric].empty or
                 current_metric not in self.control_stats or self.control_stats[current_metric].empty):
                 self.logger.warning(f"Missing data for {current_metric} comparison. Skipping visualization.")
@@ -535,7 +529,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
             available_control = set(control_renamed.columns)
             common_metrics = list(set(common_cols_needed) & available_outbreak & available_control)
             common_cols = plot_cols_base + common_metrics
-            common_cols = list(set(common_cols))  # Ensure unique columns
+            common_cols = list(set(common_cols))
             
             # Check if essential columns are present after intersection
             required_viz_cols = ['value_at_removal', 'group']
@@ -558,7 +552,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                 # 'Tail Biting': 'TB',
                 # 'Control': 'Ctrl'
                 'Schwanzbeißbucht': 'SB',
-                'Kontrolle': 'Ktrl'
+                'Kontrolle': 'KB'
             }
             
             # --- Panel A (Row 0, Col 0): Value Distribution Comparison ---
@@ -638,9 +632,6 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                                 
                         if len(avg_values) > 1:
                             plotted_traj = True
-                            # Plot average line
-                            # ax1.plot(x_values, avg_values, marker='o', markersize=5, linewidth=2.0,
-                            #         color=color, label=f'{group} Avg (N={len(group_data)})', zorder=10)
                             ax1.plot(x_values, avg_values, marker='o', markersize=5, linewidth=2.0,
                                    color=color, label=f'{group} Ø (N={len(group_data)})', zorder=10)
                                    
@@ -730,18 +721,16 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                     if has_data_for_metric:
                         slope_metrics_compared.append(col)
                         
-            bp = None  # Initialize bp to None
+            bp = None 
             if slope_data_comp:
                 # Capture the returned bp dictionary
                 bp = self._style_boxplot(ax3, slope_data_comp, slope_labels_comp, slope_colors_comp, widths=0.7)
                 ax3.axhline(y=0, color=COLORS['grid'], linestyle='--', linewidth=1.0)
                 
-                # Add significance annotations if comparison results available
                 if current_metric in self.comparison_results:
                     for i, metric in enumerate(slope_metrics_compared):
                         metric_key = f"{current_metric}_{metric}"
                         if metric_key in self.comparison_results[current_metric] and self.comparison_results[current_metric][metric_key]['is_significant']:
-                            # Here you would add the significance annotation code if needed
                             pass
             else:
                 ax3.text(0.5, 0.5, 'Insufficient data for slope comparison', ha='center', va='center', color=COLORS['annotation'])
@@ -794,7 +783,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
         self.logger.info("Visualizing lying components (lying vs not lying pigs)...")
         set_plotting_style(self.config)
         
-        # We need the raw lying and not lying data
+        # Raw lying and not lying data
         if ('num_pigs_lying' not in self.pre_outbreak_stats or 
             'num_pigs_notLying' not in self.pre_outbreak_stats or
             self.pre_outbreak_stats['num_pigs_lying'].empty or 
@@ -840,7 +829,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
         
         # Prepare data by combining lying and not lying
         days_before_list = self.config.get('days_before_list', [7, 3, 1])
-        days_list_with_removal = days_before_list + [0]  # Add day 0 for removal day
+        days_list_with_removal = days_before_list + [0]
         
         # Create a consolidated dataframe
         trajectory_data = []

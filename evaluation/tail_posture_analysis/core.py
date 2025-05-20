@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from evaluation.tail_posture_analysis.utils import COLORS
+from evaluation.utils.utils import COLORS
 from pipeline.utils.path_manager import PathManager
 
 class TailPostureAnalysisBase:
@@ -35,14 +35,7 @@ class TailPostureAnalysisBase:
         # Initialize path manager
         self.path_manager = PathManager()
 
-        # Create output directory if it doesn't exist
-        os.makedirs(self.config['output_dir'], exist_ok=True)
-
-        # Setup logging FIRST before we try to use the logger
         self._setup_logging()
-
-        # Save configuration (now can use logger)
-        self._save_config()
 
         # Initialize data containers
         self.monitoring_results = None
@@ -56,18 +49,10 @@ class TailPostureAnalysisBase:
         """Set up logging configuration."""
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.FileHandler("tail_posture_analysis_descriptive.log"),
                 logging.StreamHandler()
             ]
         )
         self.logger = logging.getLogger("tail_posture_descriptive_analysis")
-        
-    def _save_config(self):
-        """Save the current configuration to file."""
-        config_path = os.path.join(self.config['output_dir'], 'analysis_config.txt')
-        with open(config_path, 'w') as f:
-            for key, value in self.config.items():
-                f.write(f"{key}: {value}\n")
-        self.logger.info(f"Saved configuration to {config_path}")

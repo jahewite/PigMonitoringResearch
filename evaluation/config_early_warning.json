@@ -1,0 +1,29 @@
+{
+  "random_seed": 42,
+  "use_interpolated_data": true,
+  "max_days_before": 7,
+  "thresholds": {
+    "attention": {
+      "posture_diff": 0.5
+    },
+    "alert": {
+      "posture_diff": 0.4
+    },
+    "critical": {
+      "posture_diff": 0.25
+    }
+  },
+  "output_dir": "results_early_warning_evaluation",
+  "summary_filename": "early_warning_evaluation.csv",
+  "details_filename": "early_warning_pen_details.csv",
+  "optimization_filename": "threshold_optimization_results.csv",
+  "default_threshold_sets": [
+    {
+      "thresholds": {
+        "attention": {"posture_diff": 0.6},
+        "alert": {"posture_diff": 0.4},
+        "critical": {"posture_diff": 0.2}
+      }
+    }
+  ]
+}

@@ -16,6 +16,7 @@
     "min_control_dates_threshold": 8,
     "control_date_margin": 5,
     "min_control_analysis_dates": 2,
+    "min_sample_values_comparison": 10,
     "control_samples_per_pen": 5,
     "comparison_metrics": [
         "value_at_removal",

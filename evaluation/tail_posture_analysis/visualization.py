@@ -9,25 +9,67 @@ import numpy as np
 import pandas as pd
 import os
 import logging
+import json
+import os
+from datetime import datetime
 
 from pipeline.utils.general import load_json_data
-from pipeline.utils.data_analysis_utils import get_pen_info, sorting_key
+from pipeline.utils.data_analysis_utils import get_pen_info
 from evaluation.tail_posture_analysis.analysis import TailPostureAnalyzer
-from evaluation.tail_posture_analysis.utils import COLORS, PATTERN_COLORS, lighten_color, set_plotting_style
+from evaluation.utils.utils import COLORS, PATTERN_COLORS, lighten_color, set_plotting_style
 
 class TailPostureVisualizer(TailPostureAnalyzer):
     """Methods for visualizing tail posture analysis results."""
     
     def __init__(self, *args, **kwargs):
-        # Ensure logger is initialized in the base class or here
-        super().__init__(*args, **kwargs) # Call parent __init__
-        if not hasattr(self, 'logger'): # If logger wasn't set by parent
+        super().__init__(*args, **kwargs)
+        if not hasattr(self, 'logger'):
              self.logger = logging.getLogger(__name__)
-             if not self.logger.hasHandlers(): # Basic config if no handlers attached
+             if not self.logger.hasHandlers():
                  logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         # Set the style upon instantiation
         set_plotting_style(self.config)
         self.logger.info("Dissertation quality plotting style set.")
+        
+    def log_visualization_stats(self, stats_dict, function_name, format='csv'):
+        """
+        Log visualization statistics to a file for reference in plot descriptions.
+        """
+        
+        # Create output directory specifically for viz statistics
+        viz_stats_dir = os.path.join(self.config['output_dir'], 'visualization_stats')
+        os.makedirs(viz_stats_dir, exist_ok=True)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime("%Y%m%d")
+        filename = f"{function_name}_statistics_{timestamp}.{format}"
+        file_path = os.path.join(viz_stats_dir, filename)
+        
+        try:
+            if format.lower() == 'csv':
+                flat_data = self._flatten_dict(stats_dict)
+                df = pd.DataFrame(flat_data.items(), columns=['Metric', 'Value'])
+                df.to_csv(file_path, index=False)
+            else:
+                with open(file_path, 'w') as f:
+                    json.dump(stats_dict, f, indent=4, default=str)
+                    
+            self.logger.info(f"Saved visualization statistics to {file_path}")
+            return file_path
+        except Exception as e:
+            self.logger.error(f"Failed to log visualization statistics: {e}")
+            return None
+
+    def _flatten_dict(self, d, parent_key='', sep='_'):
+        """Helper to flatten nested dictionaries for CSV output."""
+        items = {}
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.update(self._flatten_dict(v, new_key, sep=sep))
+            else:
+                items[new_key] = v
+        return items
     
     def _style_violin_box(self, ax, data, labels, violin_color, box_color, scatter_color, violin_width=0.6):
         """Helper to style combined violin and box plots (Dissertation Quality)."""
@@ -36,19 +78,19 @@ class TailPostureVisualizer(TailPostureAnalyzer):
              return # No data to plot
 
         try:
-            # Violin Plot - Lighter fill, slightly darker edge
-            parts = ax.violinplot(data, showmeans=False, showmedians=False, widths=violin_width) # Mean/Median handled by boxplot
+            # Violin Plot
+            parts = ax.violinplot(data, showmeans=False, showmedians=False, widths=violin_width)
             for pc in parts['bodies']:
-                pc.set_facecolor(lighten_color(violin_color, 0.7)) # More lightening for fill
-                pc.set_edgecolor(violin_color) # Use main color for edge
-                pc.set_alpha(0.9) # Slightly less transparent
-                pc.set_linewidth(0.8) # Thin edge
+                pc.set_facecolor(lighten_color(violin_color, 0.7))
+                pc.set_edgecolor(violin_color)
+                pc.set_alpha(0.9)
+                pc.set_linewidth(0.8)
 
             # Explicitly set colors/alphas based on input parameters for box fill
-            bplot = ax.boxplot(data, labels=labels, patch_artist=True, showfliers=False, # Flier handling in rcParams
-                               showmeans=True, # Use rcParams setting
-                               widths=violin_width * 0.3, # Narrower box inside violin
-                               positions=np.arange(1, len(data) + 1)) # Ensure positions match violin
+            bplot = ax.boxplot(data, labels=labels, patch_artist=True, showfliers=False,
+                               showmeans=True,
+                               widths=violin_width * 0.3,
+                               positions=np.arange(1, len(data) + 1))
 
             for patch in bplot['boxes']:
                 patch.set_facecolor(lighten_color(box_color, 0.5)) # Light fill for box
@@ -74,43 +116,6 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             self.logger.error(f"Error styling violin/box plot: {e}", exc_info=True)
             ax.text(0.5, 0.5, 'Plotting Error', ha='center', va='center', color='red')
 
-    def _style_boxplot(self, ax, data, labels, colors, show_scatter=True, scatter_alpha=0.3, widths=0.6):
-        """Helper to style box plots consistently (Dissertation Quality). Returns the boxplot dictionary."""
-        if not data or all(d is None or len(d) == 0 for d in data): # Check if data is empty or contains only empty lists/None
-             ax.text(0.5, 0.5, 'No Data', ha='center', va='center', color=COLORS['annotation'], fontsize=plt.rcParams['font.size'])
-             return None # Return None if no data
-
-        # Use rcParams for median/mean properties directly
-        bp = ax.boxplot(data, labels=labels, patch_artist=True, showfliers=False, # Flier handling in rcParams
-                        showmeans=True, # Use rcParams setting
-                        widths=widths)
-
-        # Style boxes, whiskers, caps
-        for i, box in enumerate(bp['boxes']):
-            box_color = colors[i % len(colors)]
-            box.set_facecolor(lighten_color(box_color, 0.6)) # Lighter fill
-            box.set_edgecolor(box_color) # Main color edge
-            box.set_alpha(0.85)
-            box.set_linewidth(plt.rcParams['boxplot.boxprops.linewidth'])
-
-        for whisker in bp['whiskers']:
-             whisker.set(color=plt.rcParams['axes.edgecolor'],
-                         linewidth=plt.rcParams['boxplot.whiskerprops.linewidth'],
-                         linestyle=plt.rcParams['boxplot.whiskerprops.linestyle'])
-        for cap in bp['caps']:
-             cap.set(color=plt.rcParams['axes.edgecolor'],
-                     linewidth=plt.rcParams['boxplot.capprops.linewidth'])
-
-        if show_scatter:
-            for i, d in enumerate(data):
-                 if d is not None and len(d) > 0: # Check d is not None
-                     scatter_color = colors[i % len(colors)]
-                     x_jitter = np.random.normal(i + 1, 0.03, size=len(d)) # Slightly tighter jitter
-                     ax.scatter(x_jitter, d, alpha=scatter_alpha, s=10, color=scatter_color, # Smaller dots
-                                edgecolor='none', zorder=3) # No edges
-
-        return bp
-
     def _add_stats_annotation(self, ax, text, loc='upper right', fontsize=None, **kwargs):
         """Helper to add standardized statistics box (Dissertation Quality)."""
         if fontsize is None:
@@ -120,7 +125,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         bbox_props = dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, # Higher alpha
                           edgecolor='#CCCCCC', linewidth=0.5) # Lighter edge
 
-        # Default location settings remain the same
+        # Default location settings
         loc_params = {
             'upper right': {'x': 0.98, 'y': 0.98, 'ha': 'right', 'va': 'top'},
             'upper left': {'x': 0.02, 'y': 0.98, 'ha': 'left', 'va': 'top'},
@@ -241,8 +246,6 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             col = f'pct_change_{d}d'
             data = self.pre_outbreak_stats[col].dropna()
             if not data.empty:
-                # Note: Extreme outlier filtering is less critical with symmetric percentage change,
-                # but we'll keep it for consistency and to handle any remaining outliers
                 iqr_factor = self.config.get('pct_change_outlier_iqr_factor', 3)
                 q1, q3 = data.quantile(0.25), data.quantile(0.75)
                 iqr = q3 - q1
@@ -425,7 +428,6 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                 ax3.set_xticklabels(abs_labels)
 
             ax3.axhline(y=0, color=COLORS.get('grid', 'lightgrey'), linestyle='--', linewidth=1.0)
-            # REMOVED: Stats annotation
 
         else:
             ax3.text(0.5, 0.5, 'No Absolute Change Data', ha='center', va='center', color=COLORS.get('annotation', 'grey'))
@@ -493,7 +495,6 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         # fig.suptitle('Descriptive Pre-Outbreak Tail Posture Patterns', fontsize=16, weight='bold')
         fig.subplots_adjust(left=0.08, right=0.95, bottom=0.08, top=0.92) # Adjust spacing
 
-
         if save_path is None:
             filename = self.config.get('viz_pre_outbreak_filename', 'descriptive_pre_outbreak_patterns.png')
             output_dir = self.config.get('output_dir', '.')
@@ -507,6 +508,113 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             self.logger.error(f"Failed to save pre-outbreak visualization to {save_path}: {e}")
         plt.close(fig)
 
+        # Collect comprehensive statistics for logging
+        stats_to_log = {
+            'summary_statistics': {
+                'mean_value_at_removal': float(mean_val) if pd.notna(mean_val) else None,
+                'median_value_at_removal': float(median_val) if pd.notna(median_val) else None,
+                'p25_value_at_removal': float(p25) if pd.notna(p25) else None,
+                'p10_value_at_removal': float(p10) if pd.notna(p10) else None,
+                'n_analyzed': n_analyzed
+            },
+            'time_point_distributions': {}
+        }
+        
+        # Add distribution data for each time point
+        for i, label in enumerate(labels):
+            if i < len(data_to_plot) and len(data_to_plot[i]) > 0:
+                series = data_to_plot[i]
+                stats_to_log['time_point_distributions'][label] = {
+                    'count': len(series),
+                    'mean': float(series.mean()),
+                    'median': float(series.median()),
+                    'std': float(series.std()) if len(series) > 1 else 0,
+                    'min': float(series.min()),
+                    'max': float(series.max()),
+                    'percentiles': {
+                        '10': float(series.quantile(0.1)),
+                        '25': float(series.quantile(0.25)),
+                        '75': float(series.quantile(0.75)),
+                        '90': float(series.quantile(0.9))
+                    }
+                }
+        
+        # Add percentage change data
+        if pct_changes_data:
+            stats_to_log['percentage_changes'] = {}
+            for i, label in enumerate(pct_labels):
+                if i < len(pct_changes_data) and len(pct_changes_data[i]) > 0:
+                    pct_series = pct_changes_data[i]
+                    stats_to_log['percentage_changes'][label] = {
+                        'count': len(pct_series),
+                        'mean': float(pct_series.mean()),
+                        'median': float(pct_series.median()),
+                        'std': float(pct_series.std()) if len(pct_series) > 1 else 0,
+                        'min': float(pct_series.min()),
+                        'max': float(pct_series.max()),
+                        'percentiles': {
+                            '25': float(pct_series.quantile(0.25)),
+                            '75': float(pct_series.quantile(0.75))
+                        }
+                    }
+        
+        # Add absolute change data
+        if abs_changes_data:
+            stats_to_log['absolute_changes'] = {}
+            for i, label in enumerate(abs_labels):
+                if i < len(abs_changes_data) and len(abs_changes_data[i]) > 0:
+                    abs_series = abs_changes_data[i]
+                    stats_to_log['absolute_changes'][label] = {
+                        'count': len(abs_series),
+                        'mean': float(abs_series.mean()),
+                        'median': float(abs_series.median()),
+                        'std': float(abs_series.std()) if len(abs_series) > 1 else 0,
+                        'min': float(abs_series.min()),
+                        'max': float(abs_series.max()),
+                        'percentiles': {
+                            '25': float(abs_series.quantile(0.25)),
+                            '75': float(abs_series.quantile(0.75))
+                        }
+                    }
+        
+        # Add slope data
+        if slope_data_list:
+            stats_to_log['slope_data'] = {}
+            for i, label in enumerate(slope_labels):
+                if i < len(slope_data_list) and len(slope_data_list[i]) > 0:
+                    slope_series = slope_data_list[i]
+                    stats_to_log['slope_data'][label] = {
+                        'count': len(slope_series),
+                        'mean': float(slope_series.mean()),
+                        'median': float(slope_series.median()),
+                        'std': float(slope_series.std()) if len(slope_series) > 1 else 0,
+                        'min': float(slope_series.min()),
+                        'max': float(slope_series.max()),
+                        'percentiles': {
+                            '25': float(slope_series.quantile(0.25)),
+                            '75': float(slope_series.quantile(0.75))
+                        }
+                    }
+        
+        # Add trajectory data
+        if not trajectory_data.empty and len(plot_cols) > 1:
+            valid_indices_avg = count_values > 1
+            if sum(valid_indices_avg) > 1:
+                stats_to_log['trajectory'] = {
+                    'days': [int(d) for d in plot_days],
+                    'day_labels': [f"{abs(d)}T vorher" if d < 0 else "Bei Entfernung" for d in plot_days],
+                    'average_values': avg_values.tolist() if isinstance(avg_values, np.ndarray) else [float(v) if pd.notna(v) else None for v in avg_values],
+                    'std_values': std_values.tolist() if isinstance(std_values, np.ndarray) else [float(v) if pd.notna(v) else None for v in std_values],
+                    'sample_counts': count_values.tolist() if isinstance(count_values, np.ndarray) else [int(v) for v in count_values],
+                    'confidence_intervals': {
+                        'lower': lower.tolist() if 'lower' in locals() and isinstance(lower, np.ndarray) else None,
+                        'upper': upper.tolist() if 'upper' in locals() and isinstance(upper, np.ndarray) else None
+                    }
+                }
+        
+        # Log the statistics
+        self.log_visualization_stats(stats_to_log, 'pre_outbreak_patterns')
+        
         # Return calculated stats (used for the plot elements, could be used elsewhere too)
         return {
             'mean_value_at_removal': mean_val,
@@ -550,7 +658,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                                 edgecolor='white', linewidth=0.5, zorder=3)
 
         return bp
-        
+    
     def visualize_comparison_with_controls(self, save_path=None):
         """Create a side-by-side visualization comparing tail biting pens to control pens."""
         self.logger.info("Visualizing comparison between outbreak and control pens...")
@@ -599,8 +707,8 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         # Check if essential columns are present after intersection
         required_viz_cols = ['value_at_removal', 'group']
         if not all(col in common_cols for col in required_viz_cols):
-             self.logger.error(f"Missing essential columns {required_viz_cols} for comparison viz.")
-             return None
+            self.logger.error(f"Missing essential columns {required_viz_cols} for comparison viz.")
+            return None
 
         outbreak_subset = outbreak_data[[col for col in common_cols if col in outbreak_data.columns]]
         control_subset = control_renamed[[col for col in common_cols if col in control_renamed.columns]]
@@ -642,14 +750,14 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             time_points[f'{d}T vorher'] = f'value_{d}d_before'
 
         for time_label, col_name in time_points.items():
-             if col_name not in combined_data.columns: continue
-             for group, short_label in group_labels.items():
-                 data_series = combined_data.loc[combined_data['group'] == group, col_name]
-                 data_vals = data_series.dropna().values
-                 if len(data_vals) > 0:
-                     boxplot_data_comp.append(data_vals)
-                     boxplot_labels_comp.append(f'{short_label}: {time_label}')
-                     boxplot_colors_comp.append(group_colors[group])
+            if col_name not in combined_data.columns: continue
+            for group, short_label in group_labels.items():
+                data_series = combined_data.loc[combined_data['group'] == group, col_name]
+                data_vals = data_series.dropna().values
+                if len(data_vals) > 0:
+                    boxplot_data_comp.append(data_vals)
+                    boxplot_labels_comp.append(f'{short_label}: {time_label}')
+                    boxplot_colors_comp.append(group_colors[group])
 
         if boxplot_data_comp:
             self._style_boxplot(ax0, boxplot_data_comp, boxplot_labels_comp, boxplot_colors_comp, widths=0.7)
@@ -685,13 +793,15 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         plot_days_comp = []
         for col, day in trajectory_days_map.items():
             if col in combined_data.columns:
-                 plot_cols_traj_comp.append(col)
-                 plot_days_comp.append(day)
+                plot_cols_traj_comp.append(col)
+                plot_days_comp.append(day)
         sorted_indices_traj = np.argsort(plot_days_comp)
         plot_cols_traj_comp = [plot_cols_traj_comp[i] for i in sorted_indices_traj]
         plot_days_comp = [plot_days_comp[i] for i in sorted_indices_traj]
 
         plotted_traj = False
+        trajectory_data_by_group = {}
+        
         if len(plot_cols_traj_comp) > 1:
             for group, color in group_colors.items():
                 group_data = combined_data.loc[combined_data['group'] == group]
@@ -707,11 +817,19 @@ class TailPostureVisualizer(TailPostureAnalyzer):
 
                     if len(avg_values) > 1:
                         plotted_traj = True
+                        # Store trajectory data for logging
+                        trajectory_data_by_group[group] = {
+                            'days': x_values,
+                            'avg_values': avg_values,
+                            'std_values': std_values,
+                            'n_points': n_points
+                        }
+                        
                         # Plot average line
                         # ax1.plot(x_values, avg_values, marker='o', markersize=5, linewidth=2.0,
                         #     color=color, label=f'{group} Avg (N={len(group_data)})', zorder=10)
                         ax1.plot(x_values, avg_values, marker='o', markersize=5, linewidth=2.0,
-                                 color=color, label=f'{"Schwanzbeißbucht" if group == "Tail Biting" else "Kontrollbucht"} Ø (N={len(group_data)})', zorder=10)
+                                color=color, label=f'{"Schwanzbeißbucht" if group == "Tail Biting" else "Kontrollbucht"} Ø (N={len(group_data)})', zorder=10)
                         # Plot CI
                         try:
                             ci_level = self.config.get('confidence_level', 0.95)
@@ -734,7 +852,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             ax1.set_xticklabels([f'{abs(d)}T' if d < 0 else 'Tag 0' for d in plot_days_comp], rotation=0, ha='center', fontsize=9)
             ax1.legend(loc='best', frameon=True, fontsize=9)
         else:
-             ax1.text(0.5, 0.5, 'Insufficient data for trajectories', ha='center', va='center', color=COLORS['annotation'])
+            ax1.text(0.5, 0.5, 'Insufficient data for trajectories', ha='center', va='center', color=COLORS['annotation'])
 
         # ax1.set_title('B) Average Trajectory Comparison')
         # ax1.set_xlabel('Days Before Removal/Reference')
@@ -751,17 +869,26 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         ax2 = fig.add_subplot(gs[1, 0])
         change_data_comp, change_labels_comp, change_colors_comp = [], [], []
         days_list = self.config.get('days_before_list', [7, 3, 1])
+        
+        change_data_by_group = {}
+        
         for d in sorted(days_list, reverse=True): # Consistent order
             col = f'abs_change_{d}d'
             if col in combined_data.columns:
-                 for group, short_label in group_labels.items():
-                     data_series = combined_data.loc[combined_data['group'] == group, col]
-                     data_vals = data_series.dropna().values
-                     if len(data_vals) > 0:
-                         change_data_comp.append(data_vals)
-                         # change_labels_comp.append(f'{short_label}: {d}d Change')
-                         change_labels_comp.append(f'{short_label}: {d}T Änderung')
-                         change_colors_comp.append(group_colors[group])
+                for group, short_label in group_labels.items():
+                    data_series = combined_data.loc[combined_data['group'] == group, col]
+                    data_vals = data_series.dropna().values
+                    if len(data_vals) > 0:
+                        # Store data for logging
+                        if group not in change_data_by_group:
+                            change_data_by_group[group] = {}
+                        change_data_by_group[group][f'{d}d'] = data_vals
+                        
+                        # Add to plot data
+                        change_data_comp.append(data_vals)
+                        # change_labels_comp.append(f'{short_label}: {d}d Change')
+                        change_labels_comp.append(f'{short_label}: {d}T Änderung')
+                        change_colors_comp.append(group_colors[group])
 
         if change_data_comp:
             self._style_boxplot(ax2, change_data_comp, change_labels_comp, change_colors_comp, widths=0.7)
@@ -786,6 +913,9 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         ax3 = fig.add_subplot(gs[1, 1])
         slope_data_comp, slope_labels_comp, slope_colors_comp = [], [], []
         slope_metrics_compared = []
+        
+        slope_data_by_group = {}
+        
         analysis_windows = self.config.get('analysis_window_days', [7, 3])
         for d in sorted(analysis_windows, reverse=True): # Consistent order
             col = f'{d}d_window_slope'
@@ -796,6 +926,13 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                     data_vals = data_series.dropna().values
                     if len(data_vals) > 0:
                         has_data_for_metric = True
+                        
+                        # Store data for logging
+                        if group not in slope_data_by_group:
+                            slope_data_by_group[group] = {}
+                        slope_data_by_group[group][f'{d}d'] = data_vals
+                        
+                        # Add to plot data
                         slope_data_comp.append(data_vals)
                         # slope_labels_comp.append(f'{short_label}: {d}d Slope')
                         slope_labels_comp.append(f'{short_label}: {d}T Steigung')
@@ -812,44 +949,44 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             # Add significance annotations (NOW bp should be defined if plot was successful)
             comparison_results = self.compare_outbreak_vs_control_statistics()
             if comparison_results and bp is not None: # Check bp is not None
-                 y_lim = ax3.get_ylim()
-                 y_range = y_lim[1] - y_lim[0]
-                 sig_offset = y_range * 0.05
+                y_lim = ax3.get_ylim()
+                y_range = y_lim[1] - y_lim[0]
+                sig_offset = y_range * 0.05
 
-                 for i, metric in enumerate(slope_metrics_compared):
-                     if metric in comparison_results and comparison_results[metric]['is_significant']:
-                         x_pos = 2 * i + 1.5
-                         try:
-                              idx1 = 2*i
-                              idx2 = 2*i + 1
-                              max_y_pair = -np.inf
+                for i, metric in enumerate(slope_metrics_compared):
+                    if metric in comparison_results and comparison_results[metric]['is_significant']:
+                        x_pos = 2 * i + 1.5
+                        try:
+                            idx1 = 2*i
+                            idx2 = 2*i + 1
+                            max_y_pair = -np.inf
 
-                              # Use data directly for robust max finding (handles outliers better than caps)
-                              if idx1 < len(slope_data_comp) and len(slope_data_comp[idx1]) > 0:
-                                   q1, q3 = np.percentile(slope_data_comp[idx1], [25, 75])
-                                   upper_whisker = q3 + 1.5 * (q3 - q1)
-                                   max_y_pair = max(max_y_pair, np.nanmax(slope_data_comp[idx1][slope_data_comp[idx1] <= upper_whisker]))
-                              if idx2 < len(slope_data_comp) and len(slope_data_comp[idx2]) > 0:
-                                   q1, q3 = np.percentile(slope_data_comp[idx2], [25, 75])
-                                   upper_whisker = q3 + 1.5 * (q3 - q1)
-                                   max_y_pair = max(max_y_pair, np.nanmax(slope_data_comp[idx2][slope_data_comp[idx2] <= upper_whisker]))
+                            # Use data directly for robust max finding (handles outliers better than caps)
+                            if idx1 < len(slope_data_comp) and len(slope_data_comp[idx1]) > 0:
+                                q1, q3 = np.percentile(slope_data_comp[idx1], [25, 75])
+                                upper_whisker = q3 + 1.5 * (q3 - q1)
+                                max_y_pair = max(max_y_pair, np.nanmax(slope_data_comp[idx1][slope_data_comp[idx1] <= upper_whisker]))
+                            if idx2 < len(slope_data_comp) and len(slope_data_comp[idx2]) > 0:
+                                q1, q3 = np.percentile(slope_data_comp[idx2], [25, 75])
+                                upper_whisker = q3 + 1.5 * (q3 - q1)
+                                max_y_pair = max(max_y_pair, np.nanmax(slope_data_comp[idx2][slope_data_comp[idx2] <= upper_whisker]))
 
-                              # Optional: Use caps as a fallback or addition if data method fails often
-                              if 'caps' in bp and len(bp['caps']) > idx2 * 2 + 1:
-                                   cap_y = bp['caps'][idx2 * 2 + 1].get_ydata()[0]
-                                   if max_y_pair == -np.inf: # If data method failed
+                            # Optional: Use caps as a fallback or addition if data method fails often
+                            if 'caps' in bp and len(bp['caps']) > idx2 * 2 + 1:
+                                cap_y = bp['caps'][idx2 * 2 + 1].get_ydata()[0]
+                                if max_y_pair == -np.inf: # If data method failed
                                         max_y_pair = cap_y
-                                   else: # Otherwise take the higher of the two
+                                else: # Otherwise take the higher of the two
                                         max_y_pair = max(max_y_pair, cap_y)
 
-                              if max_y_pair == -np.inf: # Final fallback
-                                  max_y_pair = ax3.get_ylim()[1] * 0.9
+                            if max_y_pair == -np.inf: # Final fallback
+                                max_y_pair = ax3.get_ylim()[1] * 0.9
 
-                              y_pos = max_y_pair + sig_offset
+                            y_pos = max_y_pair + sig_offset
 
-                         except (IndexError, ValueError, KeyError) as e_pos: # Catch potential errors more broadly
-                              self.logger.warning(f"Could not determine optimal y-position for significance marker on {metric}: {e_pos}")
-                              y_pos = ax3.get_ylim()[1] * 0.9 # Fallback position
+                        except (IndexError, ValueError, KeyError) as e_pos: # Catch potential errors more broadly
+                            self.logger.warning(f"Could not determine optimal y-position for significance marker on {metric}: {e_pos}")
+                            y_pos = ax3.get_ylim()[1] * 0.9 # Fallback position
 
                         #  p_val = comparison_results[metric]['p_value']
                         #  # ... (determine sig_str: ***, **, *) ...
@@ -887,8 +1024,101 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         finally:
             plt.close(fig)
 
-        return True
+        # Collect statistics for logging
+        stats_to_log = {
+            'dataset_info': {
+                'outbreak_data': {
+                    'count': len(outbreak_subset),
+                    'pens': len(outbreak_subset['pen'].unique()) if 'pen' in outbreak_subset.columns else 0
+                },
+                'control_data': {
+                    'count': len(control_subset),
+                    'pens': len(control_subset['pen'].unique()) if 'pen' in control_subset.columns else 0
+                }
+            },
+            'value_comparison': {},
+            'trajectory_comparison': {},
+            'change_comparison': {},
+            'slope_comparison': {}
+        }
         
+        # Add boxplot comparison data
+        if boxplot_data_comp:
+            for i, label in enumerate(boxplot_labels_comp):
+                if i < len(boxplot_data_comp) and len(boxplot_data_comp[i]) > 0:
+                    data = boxplot_data_comp[i]
+                    stats_to_log['value_comparison'][label] = {
+                        'count': len(data),
+                        'mean': float(np.mean(data)),
+                        'median': float(np.median(data)),
+                        'std': float(np.std(data)) if len(data) > 1 else 0,
+                        'min': float(np.min(data)),
+                        'max': float(np.max(data)),
+                        'percentiles': {
+                            '25': float(np.percentile(data, 25)),
+                            '75': float(np.percentile(data, 75))
+                        }
+                    }
+        
+        # Add trajectory comparison data
+        if plotted_traj:
+            for group, data in trajectory_data_by_group.items():
+                group_key = "outbreak" if group == "Tail Biting" else "control"
+                stats_to_log['trajectory_comparison'][group_key] = {
+                    'days': data['days'],
+                    'mean_values': [float(v) for v in data['avg_values']],
+                    'std_values': [float(v) for v in data['std_values']],
+                    'sample_counts': [int(n) for n in data['n_points']]
+                }
+        
+        # Add change comparison data
+        if change_data_by_group:
+            for group, windows in change_data_by_group.items():
+                group_key = "outbreak" if group == "Tail Biting" else "control"
+                stats_to_log['change_comparison'][group_key] = {}
+                for window, values in windows.items():
+                    stats_to_log['change_comparison'][group_key][window] = {
+                        'count': len(values),
+                        'mean': float(np.mean(values)),
+                        'median': float(np.median(values)),
+                        'std': float(np.std(values)) if len(values) > 1 else 0,
+                        'min': float(np.min(values)),
+                        'max': float(np.max(values)),
+                        'percentiles': {
+                            '25': float(np.percentile(values, 25)),
+                            '75': float(np.percentile(values, 75))
+                        }
+                    }
+        
+        # Add slope comparison data
+        if slope_data_by_group:
+            for group, windows in slope_data_by_group.items():
+                group_key = "outbreak" if group == "Tail Biting" else "control"
+                stats_to_log['slope_comparison'][group_key] = {}
+                for window, values in windows.items():
+                    stats_to_log['slope_comparison'][group_key][window] = {
+                        'count': len(values),
+                        'mean': float(np.mean(values)),
+                        'median': float(np.median(values)),
+                        'std': float(np.std(values)) if len(values) > 1 else 0,
+                        'min': float(np.min(values)),
+                        'max': float(np.max(values)),
+                        'percentiles': {
+                            '25': float(np.percentile(values, 25)),
+                            '75': float(np.percentile(values, 75))
+                        }
+                    }
+        
+        # Add statistical comparison results if available
+        comparison_results = self.compare_outbreak_vs_control_statistics()
+        if comparison_results:
+            stats_to_log['statistical_comparisons'] = comparison_results
+        
+        # Log the statistics
+        self.log_visualization_stats(stats_to_log, 'comparison_with_controls')
+
+        return True    
+    
     def visualize_individual_variation(self, save_path=None):
         """Create visualizations showing individual variation in outbreak patterns."""
         self.logger.info("Visualizing individual variation in outbreak patterns...")
@@ -904,7 +1134,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             self.pattern_stats = pattern_results.get('pattern_stats', pd.DataFrame())
             self.pen_consistency = pattern_results.get('pen_consistency', {})
         else:
-             pattern_results = {
+            pattern_results = {
                 'outbreak_patterns': self.outbreak_patterns,
                 'pattern_counts': self.outbreak_patterns['pattern_category'].value_counts().to_dict(),
                 'pattern_stats': getattr(self, 'pattern_stats', pd.DataFrame()),
@@ -913,14 +1143,16 @@ class TailPostureVisualizer(TailPostureAnalyzer):
 
         outbreaks_df = pattern_results.get('outbreak_patterns')
         if outbreaks_df is None or outbreaks_df.empty:
-             self.logger.error("Outbreak patterns DataFrame is missing or empty.")
-             return None
+            self.logger.error("Outbreak patterns DataFrame is missing or empty.")
+            return None
         # --- End Data Prep ---
 
         fig_size = self.config.get('fig_size_variation', (11, 10)) # Adjusted size
         fig = plt.figure(figsize=fig_size)
-        gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1], width_ratios=[1, 1], # Adjusted ratio maybe needed
-                            hspace=0.45, wspace=0.3)
+        
+        # Modified GridSpec layout: 2 rows x 2 cols, but bottom row spans both columns
+        gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1], width_ratios=[1, 1],
+                            hspace=0.4, wspace=0.3)
 
         # Use PATTERN_COLORS defined in utils
         pattern_colors = PATTERN_COLORS
@@ -928,27 +1160,55 @@ class TailPostureVisualizer(TailPostureAnalyzer):
 
         # Define trajectory columns and day mapping
         traj_cols_map = {'value_7d_before': -7, 'value_5d_before': -5, 'value_3d_before': -3,
-                         'value_1d_before': -1, 'value_at_removal': 0}
+                        'value_1d_before': -1, 'value_at_removal': 0}
         traj_cols = [col for col in traj_cols_map if col in outbreaks_df.columns]
         plot_days_ind = sorted([traj_cols_map[col] for col in traj_cols])
 
+        # Dictionary for storing data to log
+        visualization_data = {
+            'panel_a': {'plotted': False, 'patterns': {}},
+            'panel_b': {'plotted': False, 'avg_trajectories': {}},
+            'panel_c': {'pattern_counts': {}, 'pen_consistency': {}}
+        }
 
-        # --- Panel A (Row 0, Col 0): Individual Trajectories by Pattern ---
+        # --- Panel A (Row 0, Col 0): Individual Trajectories by Pattern (MODIFIED) ---
         ax0 = fig.add_subplot(gs[0, 0])
         plotted_a = False
         if traj_cols:
             pattern_categories = outbreaks_df['pattern_category'].unique()
             valid_patterns_plotted = []
+            
+            # Improved random seed for reproducibility
+            np.random.seed(self.config.get('random_seed', 42))
 
             for pattern in pattern_categories:
                 pattern_outbreaks = outbreaks_df[outbreaks_df['pattern_category'] == pattern]
                 if pattern_outbreaks.empty: continue
 
                 color = pattern_colors.get(pattern, default_color)
-                plotted_a = True # Mark that we have data
+                plotted_a = True
                 valid_patterns_plotted.append(pattern)
-
-                for _, row in pattern_outbreaks.iterrows():
+                
+                # Store pattern data for logging
+                visualization_data['panel_a']['patterns'][pattern] = {
+                    'count': len(pattern_outbreaks),
+                    'color': color
+                }
+                
+                # Take 3 examples from each category (or fewer if not available)
+                num_examples = min(3, len(pattern_outbreaks))
+                
+                # Get indices of random sample
+                if num_examples == len(pattern_outbreaks):
+                    # Take all if 3 or fewer examples exist
+                    sample_indices = pattern_outbreaks.index.tolist()
+                else:
+                    # Take random sample of 3 examples
+                    sample_indices = np.random.choice(pattern_outbreaks.index, num_examples, replace=False)
+                
+                # Plot sampled trajectories with increased visibility
+                for idx in sample_indices:
+                    row = pattern_outbreaks.loc[idx]
                     values = [row.get(col, np.nan) for col in traj_cols]
                     valid_indices = ~np.isnan(values)
                     plot_days_row = [traj_cols_map[traj_cols[i]] for i, v in enumerate(valid_indices) if v]
@@ -957,34 +1217,90 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                     if sum(valid_indices) >= 2:
                         sorted_points = sorted(zip(plot_days_row, plot_values_row))
                         plot_days_sorted, plot_values_sorted = zip(*sorted_points)
-                        ax0.plot(plot_days_sorted, plot_values_sorted, marker='.', markersize=3, # Small marker
-                                 linewidth=0.7, alpha=0.3, color=color, zorder=5) # Thin, light lines
+                        # Increased visibility with thicker lines and higher alpha
+                        ax0.plot(plot_days_sorted, plot_values_sorted, marker='o', markersize=4, 
+                                linewidth=1.5, alpha=0.7, color=color, zorder=5)
 
             if plotted_a:
-                # Add legend using Line2D for patterns plotted
+                visualization_data['panel_a']['plotted'] = True
+                # Ensure all categories are in the legend, even if not plotted
+                # Old line commented out:
+                # legend_elements_a = [plt.Line2D([0], [0], color=pattern_colors.get(p, default_color), lw=2, label=p)
+                #                for p in valid_patterns_plotted if p in pattern_colors]
+                
+                # New lines to include all defined pattern categories in the legend
+                pattern_categories_for_legend = ['Stabil', 'Gleichmäßige Abnahme', 'Steile Abnahme']
                 legend_elements_a = [plt.Line2D([0], [0], color=pattern_colors.get(p, default_color), lw=2, label=p)
-                                   for p in valid_patterns_plotted if p in pattern_colors] # Only patterns with colors
+                                for p in pattern_categories_for_legend if p in pattern_colors]
+                
                 if legend_elements_a:
-                    ax0.legend(handles=legend_elements_a, loc='lower left', frameon=True, fontsize=8) # Smaller font
+                    ax0.legend(handles=legend_elements_a, loc='lower left', frameon=True, fontsize=9)
 
                 ax0.axhline(y=0, color=COLORS['grid'], linestyle='--', linewidth=1.0, zorder=1)
                 ax0.grid(axis='y', linestyle=':', color=COLORS['grid'], alpha=0.7)
                 ax0.grid(axis='x', b=False)
                 ax0.set_xticks(plot_days_ind)
-                ax0.set_xticklabels([f'{abs(d)}d' if d < 0 else 'Rem.' for d in plot_days_ind], fontsize=9)
+                ax0.set_xticklabels([f'{abs(d)}T' if d < 0 else 'Entf.' for d in plot_days_ind], fontsize=9)
             else:
-                 ax0.text(0.5, 0.5, 'No trajectory data', ha='center', va='center', color=COLORS['annotation'])
+                # ax0.text(0.5, 0.5, 'No trajectory data', ha='center', va='center', color=COLORS['annotation'])
+                ax0.text(0.5, 0.5, 'Keine Verlaufsdaten', ha='center', va='center', color=COLORS['annotation'])
 
         else:
-             ax0.text(0.5, 0.5, 'No trajectory columns', ha='center', va='center', color=COLORS['annotation'])
+            # ax0.text(0.5, 0.5, 'No trajectory columns', ha='center', va='center', color=COLORS['annotation'])
+            ax0.text(0.5, 0.5, 'Keine Verlaufsspalten', ha='center', va='center', color=COLORS['annotation'])
 
-        ax0.set_title('A) Individual Outbreak Trajectories by Pattern')
-        ax0.set_xlabel('Days Before Removal')
-        ax0.set_ylabel('Posture Difference')
+        # ax0.set_title('A) Individual Outbreak Trajectories by Pattern', fontsize=11, fontweight='bold')
+        ax0.set_title('A) Individuelle Ausbruch-Verläufe nach Muster', fontsize=11, fontweight='bold')
+        # ax0.set_xlabel('Days before removal')
+        ax0.set_xlabel('Tage vor Entfernung')
+        # ax0.set_ylabel('Tail posture index')
+        ax0.set_ylabel('Schwanzhaltungsindex')
 
+        # --- Plot D moved to top right (formerly Plot B position) ---
+        ax1 = fig.add_subplot(gs[0, 1])  # This is now the pattern distribution plot
+        pattern_counts = pattern_results.get('pattern_counts', {})
+        visualization_data['panel_c']['pattern_counts'] = pattern_counts
 
-        # --- Panel B (Row 0, Col 1): Trajectory Clusters with Average Lines ---
-        ax1 = fig.add_subplot(gs[0, 1])
+        if pattern_counts:
+            # Order patterns for consistency if possible (e.g., severity)
+            ordered_patterns = [p for p in PATTERN_COLORS if p in pattern_counts] + \
+                            [p for p in pattern_counts if p not in PATTERN_COLORS] # Add any others at end
+            counts = [pattern_counts[p] for p in ordered_patterns]
+            bar_colors = [pattern_colors.get(p, default_color) for p in ordered_patterns]
+
+            bars = ax1.bar(ordered_patterns, counts, color=bar_colors, edgecolor=COLORS['annotation'], linewidth=0.7)
+
+            ax1.bar_label(bars, padding=3, fontsize=9) # Labels above bars
+
+            # Optional: Add percentage labels inside or below
+            total_counts = sum(counts)
+            for bar, count in zip(bars, counts):
+                if total_counts > 0:
+                    percentage = (count / total_counts) * 100
+                    ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() / 2, # Center inside bar
+                            f'{percentage:.0f}%', ha='center', va='center', fontsize=9, 
+                            color='white', weight='bold')
+
+            # Add pen consistency info using helper
+            pen_consistency_data = pattern_results.get('pen_consistency', {})
+            visualization_data['panel_c']['pen_consistency'] = pen_consistency_data
+
+            ax1.margins(y=0.2) # Increased margin for labels
+
+        else:
+            # ax1.text(0.5, 0.5, 'No pattern counts', ha='center', va='center', color=COLORS['annotation'])
+            ax1.text(0.5, 0.5, 'Keine Musteranzahlen', ha='center', va='center', color=COLORS['annotation'])
+
+        # ax1.set_title('B) Pattern Category Distribution', fontsize=11, fontweight='bold')
+        ax1.set_title('B) Verteilung der Musterkategorien', fontsize=11, fontweight='bold')
+        # ax1.set_ylabel('Number of outbreaks')
+        ax1.set_ylabel('Anzahl der Ausbrüche')
+        ax1.tick_params(axis='x', rotation=45, labelsize=9)
+        ax1.grid(axis='y', linestyle=':', color=COLORS['grid'], alpha=0.7)
+        ax1.grid(axis='x', b=False)
+
+        # --- Plot B moved to bottom row spanning both columns (formerly Plot B) ---
+        ax2 = fig.add_subplot(gs[1, :])  # Span both columns in bottom row
         plotted_b = False
         if traj_cols:
             legend_handles_b = []
@@ -1011,8 +1327,19 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                     sorted_avg_points = sorted(zip(avg_days, avg_values, std_values, n_points))
                     avg_days_sorted, avg_values_sorted, std_values_sorted, n_points_sorted = zip(*sorted_avg_points)
 
-                    line, = ax1.plot(avg_days_sorted, avg_values_sorted, marker='o', markersize=5,
-                                     linewidth=2.0, color=color, label=f'{pattern} (N={len(pattern_outbreaks)})', zorder=10)
+                    # Store average trajectory data for logging
+                    visualization_data['panel_b']['avg_trajectories'][pattern] = {
+                        'days': list(avg_days_sorted),
+                        'avg_values': list(avg_values_sorted),
+                        'std_values': list(std_values_sorted),
+                        'n_points': list(n_points_sorted),
+                        'total_outbreaks': len(pattern_outbreaks)
+                    }
+                    
+                    # Enhanced line thickness and markers for better visibility
+                    line, = ax2.plot(avg_days_sorted, avg_values_sorted, marker='o', markersize=7,
+                                linewidth=2.5, color=color, label=f'{pattern} (N={len(pattern_outbreaks)})', zorder=10)
+                    
                     legend_handles_b.append(line)
 
                     # Add CI fill
@@ -1023,147 +1350,66 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                         margin_of_error = [t * s for t, s in zip(t_crit, sem)]
                         upper = [avg + moe for avg, moe in zip(avg_values_sorted, margin_of_error)]
                         lower = [avg - moe for avg, moe in zip(avg_values_sorted, margin_of_error)]
-                        ax1.fill_between(avg_days_sorted, upper, lower, color=color, alpha=0.15, zorder=9)
+                        ax2.fill_between(avg_days_sorted, upper, lower, color=color, alpha=0.2, zorder=9)
                     except Exception as e_ci_b:
                         self.logger.warning(f"Could not plot CI for {pattern}: {e_ci_b}")
 
             if plotted_b:
-                ax1.axhline(y=0, color=COLORS['grid'], linestyle='--', linewidth=1.0, zorder=1)
-                for day in plot_days_ind: ax1.axvline(x=day, color=COLORS['grid'], linestyle=':', linewidth=0.8, alpha=0.5)
-                ax1.grid(False, axis='x') # Only vertical lines shown above
-                ax1.grid(True, axis='y', linestyle=':', color=COLORS['grid'], alpha=0.7)
-                ax1.set_xticks(plot_days_ind)
-                ax1.set_xticklabels([f'{abs(d)}d' if d < 0 else 'Rem.' for d in plot_days_ind], fontsize=9)
-                if legend_handles_b: ax1.legend(handles=legend_handles_b, loc='best', frameon=True, fontsize=8)
+                visualization_data['panel_b']['plotted'] = True
+                ax2.axhline(y=0, color=COLORS['grid'], linestyle='--', linewidth=1.0, zorder=1)
+                for day in plot_days_ind: ax2.axvline(x=day, color=COLORS['grid'], linestyle=':', linewidth=0.8, alpha=0.5)
+                ax2.grid(False, axis='x') # Only vertical lines shown above
+                ax2.grid(True, axis='y', linestyle=':', color=COLORS['grid'], alpha=0.7)
+                ax2.set_xticks(plot_days_ind)
+                ax2.set_xticklabels([f'{abs(d)}T' if d < 0 else 'Entf.' for d in plot_days_ind], fontsize=10)
+                if legend_handles_b: 
+                    ax2.legend(handles=legend_handles_b, loc='upper right', frameon=True, fontsize=10)
             else:
-                 ax1.text(0.5, 0.5, 'Insufficient data for avg trajectories', ha='center', va='center', color=COLORS['annotation'])
+                # ax2.text(0.5, 0.5, 'Insufficient data for avg trajectories', ha='center', va='center', color=COLORS['annotation'])
+                ax2.text(0.5, 0.5, 'Unzureichende Daten für Durchschnittswerte', ha='center', va='center', color=COLORS['annotation'])
 
         else:
-            ax1.text(0.5, 0.5, 'No trajectory columns', ha='center', va='center', color=COLORS['annotation'])
+            # ax2.text(0.5, 0.5, 'No trajectory columns', ha='center', va='center', color=COLORS['annotation'])
+            ax2.text(0.5, 0.5, 'Keine Verlaufsspalten', ha='center', va='center', color=COLORS['annotation'])
 
-        ax1.set_title('B) Average Trajectories by Pattern Type')
-        ax1.set_xlabel('Days Before Removal')
-        ax1.set_ylabel('Posture Difference')
-
-
-        # --- Panel C (Row 1, Col 0): Individual Pen Variation ---
-        ax2 = fig.add_subplot(gs[1, 0])
-        plotted_c = False
-        if traj_cols:
-            pen_multi_counts = outbreaks_df['pen'].value_counts()
-            pens_with_multiple = pen_multi_counts[pen_multi_counts > 1].index.tolist()
-            pens_single = pen_multi_counts[pen_multi_counts == 1].index.tolist()
-
-            # Prioritize pens with multiple, then single
-            pens_ordered = pens_with_multiple + pens_single
-
-            max_pens_plot = self.config.get('variation_max_pens_plot', 8)
-            pens_to_show = pens_ordered[:max_pens_plot]
-
-            if pens_to_show:
-                legend_handles_c = []
-                # Use a perceptually uniform colormap if many pens
-                pen_colors = plt.cm.viridis(np.linspace(0, 1, len(pens_to_show)))
-
-                for i, pen in enumerate(pens_to_show):
-                    pen_data = outbreaks_df[outbreaks_df['pen'] == pen]
-                    pen_color = pen_colors[i]
-
-                    for j, (_, row) in enumerate(pen_data.iterrows()):
-                        values = [row.get(col, np.nan) for col in traj_cols]
-                        valid_indices = ~np.isnan(values)
-                        plot_days_row = [traj_cols_map[traj_cols[i]] for i, v in enumerate(valid_indices) if v]
-                        plot_values_row = [values[i] for i, v in enumerate(valid_indices) if v]
-
-                        if sum(valid_indices) >= 2:
-                            plotted_c = True
-                            sorted_points = sorted(zip(plot_days_row, plot_values_row))
-                            plot_days_sorted, plot_values_sorted = zip(*sorted_points)
-                            line, = ax2.plot(plot_days_sorted, plot_values_sorted, marker='o', markersize=3,
-                                             linewidth=1.2, alpha=0.6, color=pen_color, zorder=5)
-                            # Add to legend only once per pen
-                            if j == 0: legend_handles_c.append(line)
-
-                if plotted_c:
-                    # Position legend below plot
-                    ax2.legend(handles=legend_handles_c, labels=[str(p) for p in pens_to_show], # Ensure labels are strings
-                               loc='upper center', bbox_to_anchor=(0.5, -0.15),
-                               ncol=min(4, len(pens_to_show)), frameon=True, fontsize=8)
-
-                    ax2.axhline(y=0, color=COLORS['grid'], linestyle='--', linewidth=1.0, zorder=1)
-                    ax2.grid(axis='y', linestyle=':', color=COLORS['grid'], alpha=0.7)
-                    ax2.grid(axis='x', b=False)
-                    ax2.set_xticks(plot_days_ind)
-                    ax2.set_xticklabels([f'{abs(d)}d' if d < 0 else 'Rem.' for d in plot_days_ind], fontsize=9)
-                else:
-                    ax2.text(0.5, 0.5, 'No valid pen trajectories to plot', ha='center', va='center', color=COLORS['annotation'])
-            else:
-                 ax2.text(0.5, 0.5, 'No pens found to display', ha='center', va='center', color=COLORS['annotation'])
-        else:
-             ax2.text(0.5, 0.5, 'No trajectory columns', ha='center', va='center', color=COLORS['annotation'])
-
-        ax2.set_title('C) Individual Pen Variation (Sample)')
-        ax2.set_xlabel('Days Before Removal')
-        ax2.set_ylabel('Posture Difference')
-
-
-        # --- Panel D (Row 1, Col 1): Pattern Distribution ---
-        ax3 = fig.add_subplot(gs[1, 1])
-        pattern_counts = pattern_results.get('pattern_counts', {})
-
-        if pattern_counts:
-            # Order patterns for consistency if possible (e.g., severity)
-            ordered_patterns = [p for p in PATTERN_COLORS if p in pattern_counts] + \
-                               [p for p in pattern_counts if p not in PATTERN_COLORS] # Add any others at end
-            counts = [pattern_counts[p] for p in ordered_patterns]
-            bar_colors = [pattern_colors.get(p, default_color) for p in ordered_patterns]
-
-            bars = ax3.bar(ordered_patterns, counts, color=bar_colors, edgecolor=COLORS['annotation'], linewidth=0.7)
-
-            ax3.bar_label(bars, padding=3, fontsize=8) # Labels above bars
-
-            # Optional: Add percentage labels inside or below
-            # total_counts = sum(counts)
-            # for bar, count in zip(bars, counts):
-            #     if total_counts > 0:
-            #         percentage = (count / total_counts) * 100
-            #         ax3.text(bar.get_x() + bar.get_width() / 2, bar.get_height() / 2, # Center inside bar
-            #                  f'{percentage:.0f}%', ha='center', va='center', fontsize=7, color='white', weight='bold')
-
-            # Add pen consistency info using helper
-            pen_consistency_data = pattern_results.get('pen_consistency', {})
-            pens_consistent = pen_consistency_data.get('pens_consistent', 0)
-            pens_with_multiple = pen_consistency_data.get('pens_with_multiple', 0)
-            if pens_with_multiple > 0:
-                consistency_pct = pen_consistency_data.get('consistency_percentage', 0)
-                # consistency_text = (f"Pen Consistency: {pens_consistent}/{pens_with_multiple} pens "
-                #                     f"({consistency_pct:.0f}%) had same pattern")
-                # self._add_stats_annotation(ax3, consistency_text, loc='upper right', fontsize=8)
-
-            ax3.margins(y=0.1) # Add margin for labels
-
-        else:
-             ax3.text(0.5, 0.5, 'No pattern counts', ha='center', va='center', color=COLORS['annotation'])
-
-        ax3.set_title('D) Distribution of Pattern Categories')
-        ax3.set_ylabel('Number of Outbreaks')
-        ax3.tick_params(axis='x', rotation=45, labelsize=9)
-        ax3.grid(axis='y', linestyle=':', color=COLORS['grid'], alpha=0.7)
-        ax3.grid(axis='x', b=False)
+        # ax2.set_title('C) Average Trajectories by Pattern Type', fontsize=11, fontweight='bold')
+        ax2.set_title('C) Durchschnittliche Verläufe nach Mustertyp', fontsize=11, fontweight='bold')
+        # ax2.set_xlabel('Days before removal', fontsize=10)
+        ax2.set_xlabel('Tage vor Entfernung', fontsize=10)
+        # ax2.set_ylabel('Tail posture index', fontsize=10)
+        ax2.set_ylabel('Schwanzhaltungsindex', fontsize=10)
 
         # --- Layout & Saving ---
-        fig.subplots_adjust(left=0.08, right=0.95, bottom=0.1, top=0.92, hspace=0.55) # Adjust hspace more?
+        fig.subplots_adjust(left=0.08, right=0.95, bottom=0.1, top=0.92) # Adjusted spacing
 
         if save_path is None:
             filename = self.config.get('viz_variation_filename', 'individual_variation_analysis.png')
             save_path = os.path.join(self.config['output_dir'], filename)
         try:
-            fig.savefig(save_path)
+            dpi = self.config.get('figure_dpi', 300)
+            fig.savefig(save_path, dpi=dpi)
             self.logger.info(f"Saved individual variation visualization to {save_path}")
         except Exception as e:
             self.logger.error(f"Failed to save individual variation visualization: {e}")
         finally:
             plt.close(fig)
+
+        # Collect statistics for logging
+        stats_to_log = {
+            'dataset_info': {
+                'outbreak_patterns': {
+                    'count': len(outbreaks_df),
+                    'pens': len(outbreaks_df['pen'].unique()) if 'pen' in outbreaks_df.columns else 0,
+                    'pattern_categories': list(pattern_counts.keys()) if pattern_counts else []
+                }
+            },
+            'pattern_distribution': pattern_counts,
+            'pen_consistency': pen_consistency_data,
+            'visualization_data': visualization_data
+        }
+        
+        # Log the statistics
+        self.log_visualization_stats(stats_to_log, 'individual_variation')
 
         return True
         
@@ -1198,7 +1444,6 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                             hspace=0.4, wspace=0.3)
 
         # --- Panel A (Row 0, Col 0): Outbreak Component Trajectories ---
-        # This panel remains the same as the previous refactored version
         ax0 = fig.add_subplot(gs[0, 0])
         avg_by_day_outbreak = outbreak_components.groupby('days_before_removal').agg({
             'upright_tails': ['mean', 'std', 'count'],
@@ -1215,6 +1460,8 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             'posture_diff': 'Schwanzhaltungsindex'
         }
         
+        outbreak_metric_data = {}
+        
         if not avg_by_day_outbreak.empty and len(days_outbreak) > 1:
             plotted_a = True
             for metric, color_name in [('upright_tails', 'upright'), ('hanging_tails', 'hanging'), ('posture_diff', 'difference')]:
@@ -1222,6 +1469,15 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                 stds = avg_by_day_outbreak[(metric, 'std')].reindex(days_outbreak).values
                 counts = avg_by_day_outbreak[(metric, 'count')].reindex(days_outbreak).values
                 valid_idx = (counts > 1) & ~np.isnan(means)
+                
+                # Store data for logging
+                outbreak_metric_data[metric] = {
+                    'days': [int(-d) for d in np.array(days_outbreak)[valid_idx]],
+                    'means': [float(v) for v in means[valid_idx]],
+                    'stds': [float(v) for v in stds[valid_idx]],
+                    'counts': [int(v) for v in counts[valid_idx]]
+                }
+                
                 if np.sum(valid_idx) > 1:
                     x_plot = np.array(days_x_outbreak)[valid_idx]
                     means_plot = means[valid_idx]
@@ -1261,6 +1517,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         # --- Panel B (Row 0, Col 1): Control vs. Outbreak Comparison (Diff & Components) --- MODIFIED ---
         ax1 = fig.add_subplot(gs[1, 0])
         plotted_b = False
+        comparison_data = {}
         if has_controls:
             # Calculate averages for controls INCLUDING COMPONENTS
             avg_by_day_control = control_components.groupby('days_before_removal').agg({
@@ -1274,88 +1531,94 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             common_days_x = [-d for d in common_days]
 
             if len(common_days) > 1:
-                 # --- Extract Data for Common Days ---
-                 # Initialize dicts to store extracted data
-                 data_comp = {'outbreak': {}, 'control': {}}
-                 metrics_to_plot = ['posture_diff', 'upright_tails', 'hanging_tails']
+                # --- Extract Data for Common Days ---
+                # Initialize dicts to store extracted data
+                data_comp = {'outbreak': {}, 'control': {}}
+                metrics_to_plot = ['posture_diff', 'upright_tails', 'hanging_tails']
 
-                 for group, avg_data, source_counts in [('outbreak', avg_by_day_outbreak, outbreak_components),
+                for group, avg_data, source_counts in [('outbreak', avg_by_day_outbreak, outbreak_components),
                                                         ('control', avg_by_day_control, control_components)]:
-                     group_counts = avg_data.xs('count', axis=1, level=1) # Get counts for all metrics
-                     # Check if counts for diff > 1 on common days
-                     valid_counts_diff = group_counts['posture_diff'].reindex(common_days).fillna(0) > 1
-                     data_comp[group]['n_pens'] = len(source_counts['pen'].unique())
+                    group_counts = avg_data.xs('count', axis=1, level=1) # Get counts for all metrics
+                    # Check if counts for diff > 1 on common days
+                    valid_counts_diff = group_counts['posture_diff'].reindex(common_days).fillna(0) > 1
+                    data_comp[group]['n_pens'] = len(source_counts['pen'].unique())
 
-                     for metric in metrics_to_plot:
-                         if (metric, 'mean') in avg_data.columns:
-                             means = avg_data[(metric, 'mean')].reindex(common_days).values
-                             stds = avg_data[(metric, 'std')].reindex(common_days).values
-                             # Ensure counts are also reindexed and valid
-                             counts = group_counts[metric].reindex(common_days).fillna(0).values
+                    for metric in metrics_to_plot:
+                        if (metric, 'mean') in avg_data.columns:
+                            means = avg_data[(metric, 'mean')].reindex(common_days).values
+                            stds = avg_data[(metric, 'std')].reindex(common_days).values
+                            # Ensure counts are also reindexed and valid
+                            counts = group_counts[metric].reindex(common_days).fillna(0).values
 
-                             # Apply the validity mask derived from posture_diff counts (or could use metric's own counts)
-                             means[~valid_counts_diff] = np.nan
-                             stds[~valid_counts_diff] = np.nan
-                             counts[~valid_counts_diff] = 0 # Set count to 0 if invalid
+                            # Apply the validity mask derived from posture_diff counts (or could use metric's own counts)
+                            means[~valid_counts_diff] = np.nan
+                            stds[~valid_counts_diff] = np.nan
+                            counts[~valid_counts_diff] = 0 # Set count to 0 if invalid
 
-                             data_comp[group][metric] = {'mean': means, 'std': stds, 'count': counts}
-                         else:
-                             # Fill with NaNs if metric doesn't exist in avg_data
-                              data_comp[group][metric] = {'mean': np.full(len(common_days), np.nan),
-                                                          'std': np.full(len(common_days), np.nan),
-                                                          'count': np.zeros(len(common_days))}
+                            data_comp[group][metric] = {'mean': means, 'std': stds, 'count': counts}
+                        else:
+                            # Fill with NaNs if metric doesn't exist in avg_data
+                            data_comp[group][metric] = {'mean': np.full(len(common_days), np.nan),
+                                                        'std': np.full(len(common_days), np.nan),
+                                                        'count': np.zeros(len(common_days))}
+                
+                # Store data for logging
+                comparison_data = {
+                    'common_days': common_days,
+                    'days_x': common_days_x,
+                    'data_comp': data_comp
+                }
 
-                 # Check if we have *any* valid data points to plot after alignment
-                 valid_indices_plot = ~np.isnan(data_comp['outbreak']['posture_diff']['mean']) & \
-                                      ~np.isnan(data_comp['control']['posture_diff']['mean']) & \
-                                      (data_comp['outbreak']['posture_diff']['count'] > 1) & \
-                                      (data_comp['control']['posture_diff']['count'] > 1)
+                valid_indices_plot = ~np.isnan(data_comp['outbreak']['posture_diff']['mean']) & \
+                                    ~np.isnan(data_comp['control']['posture_diff']['mean']) & \
+                                    (data_comp['outbreak']['posture_diff']['count'] > 1) & \
+                                    (data_comp['control']['posture_diff']['count'] > 1)
 
-                 if np.any(valid_indices_plot): # Use any() instead of sum() > 1 for boolean array
-                     plotted_b = True
-                     x_plot_comp = np.array(common_days_x)[valid_indices_plot] # X-axis for valid points
+                if np.any(valid_indices_plot): # Use any() instead of sum() > 1 for boolean array
+                    plotted_b = True
+                    x_plot_comp = np.array(common_days_x)[valid_indices_plot] # X-axis for valid points
 
-                     # --- Plot Difference Lines (Solid, Main focus) ---
-                     # Outbreak Diff
-                     means_o_diff = data_comp['outbreak']['posture_diff']['mean'][valid_indices_plot]
-                     stds_o_diff = data_comp['outbreak']['posture_diff']['std'][valid_indices_plot]
-                     counts_o_diff = data_comp['outbreak']['posture_diff']['count'][valid_indices_plot]
-                     ax1.plot(x_plot_comp, means_o_diff, 'o-', color=COLORS['critical'], label='Outbreak Diff', linewidth=2.0, markersize=5, zorder=10)
-                     try: # CI for Outbreak Diff
-                          t_crit_o = stats.t.ppf((1 + 0.95) / 2, counts_o_diff - 1)
-                          moe_o = t_crit_o * (stds_o_diff / np.sqrt(counts_o_diff))
-                          ax1.fill_between(x_plot_comp, means_o_diff - moe_o, means_o_diff + moe_o, alpha=0.15, color=COLORS['critical'], zorder=9)
-                     except Exception: pass
+                    # --- Plot Difference Lines (Solid, Main focus) ---
+                    # Outbreak Diff
+                    means_o_diff = data_comp['outbreak']['posture_diff']['mean'][valid_indices_plot]
+                    stds_o_diff = data_comp['outbreak']['posture_diff']['std'][valid_indices_plot]
+                    counts_o_diff = data_comp['outbreak']['posture_diff']['count'][valid_indices_plot]
+                    ax1.plot(x_plot_comp, means_o_diff, 'o-', color=COLORS['critical'], label='Outbreak Diff', linewidth=2.0, markersize=5, zorder=10)
+                    try: # CI for Outbreak Diff
+                        t_crit_o = stats.t.ppf((1 + 0.95) / 2, counts_o_diff - 1)
+                        moe_o = t_crit_o * (stds_o_diff / np.sqrt(counts_o_diff))
+                        ax1.fill_between(x_plot_comp, means_o_diff - moe_o, means_o_diff + moe_o, alpha=0.15, color=COLORS['critical'], zorder=9)
+                    except Exception: pass
 
-                     # Control Diff
-                     means_c_diff = data_comp['control']['posture_diff']['mean'][valid_indices_plot]
-                     stds_c_diff = data_comp['control']['posture_diff']['std'][valid_indices_plot]
-                     counts_c_diff = data_comp['control']['posture_diff']['count'][valid_indices_plot]
-                     ax1.plot(x_plot_comp, means_c_diff, 's-', color=COLORS['control'], label='Control Diff', linewidth=2.0, markersize=5, zorder=10) # Different marker
-                     try: # CI for Control Diff
-                          t_crit_c = stats.t.ppf((1 + 0.95) / 2, counts_c_diff - 1)
-                          moe_c = t_crit_c * (stds_c_diff / np.sqrt(counts_c_diff))
-                          ax1.fill_between(x_plot_comp, means_c_diff - moe_c, means_c_diff + moe_c, alpha=0.15, color=COLORS['control'], zorder=9)
-                     except Exception: pass
+                    # Control Diff
+                    means_c_diff = data_comp['control']['posture_diff']['mean'][valid_indices_plot]
+                    stds_c_diff = data_comp['control']['posture_diff']['std'][valid_indices_plot]
+                    counts_c_diff = data_comp['control']['posture_diff']['count'][valid_indices_plot]
+                    ax1.plot(x_plot_comp, means_c_diff, 's-', color=COLORS['control'], label='Control Diff', linewidth=2.0, markersize=5, zorder=10) # Different marker
+                    try: # CI for Control Diff
+                        t_crit_c = stats.t.ppf((1 + 0.95) / 2, counts_c_diff - 1)
+                        moe_c = t_crit_c * (stds_c_diff / np.sqrt(counts_c_diff))
+                        ax1.fill_between(x_plot_comp, means_c_diff - moe_c, means_c_diff + moe_c, alpha=0.15, color=COLORS['control'], zorder=9)
+                    except Exception: pass
 
-                     # --- Plot Component Lines (Dashed, Secondary focus) ---
-                     # Outbreak Components
-                     means_o_up = data_comp['outbreak']['upright_tails']['mean'][valid_indices_plot]
-                     means_o_hang = data_comp['outbreak']['hanging_tails']['mean'][valid_indices_plot]
-                     ax1.plot(x_plot_comp, means_o_up, 'o--', color=COLORS['upright'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.7, zorder=5)
-                     ax1.plot(x_plot_comp, means_o_hang, 'o--', color=COLORS['hanging'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.7, zorder=5)
+                    # --- Plot Component Lines (Dashed, Secondary focus) ---
+                    # Outbreak Components
+                    means_o_up = data_comp['outbreak']['upright_tails']['mean'][valid_indices_plot]
+                    means_o_hang = data_comp['outbreak']['hanging_tails']['mean'][valid_indices_plot]
+                    ax1.plot(x_plot_comp, means_o_up, 'o--', color=COLORS['upright'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.7, zorder=5)
+                    ax1.plot(x_plot_comp, means_o_hang, 'o--', color=COLORS['hanging'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.7, zorder=5)
 
-                     # Control Components
-                     means_c_up = data_comp['control']['upright_tails']['mean'][valid_indices_plot]
-                     means_c_hang = data_comp['control']['hanging_tails']['mean'][valid_indices_plot]
-                     ax1.plot(x_plot_comp, means_c_up, 's--', color=COLORS['upright'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.5, zorder=5) # Lower alpha
-                     ax1.plot(x_plot_comp, means_c_hang, 's--', color=COLORS['hanging'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.5, zorder=5) # Lower alpha
+                    # Control Components
+                    means_c_up = data_comp['control']['upright_tails']['mean'][valid_indices_plot]
+                    means_c_hang = data_comp['control']['hanging_tails']['mean'][valid_indices_plot]
+                    ax1.plot(x_plot_comp, means_c_up, 's--', color=COLORS['upright'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.5, zorder=5) # Lower alpha
+                    ax1.plot(x_plot_comp, means_c_hang, 's--', color=COLORS['hanging'], label='_nolegend_', linewidth=1.5, markersize=3, alpha=0.5, zorder=5) # Lower alpha
 
-                     # --- Axes and Legend ---
-                     ax1.axhline(y=0, color=COLORS['grid'], linestyle='--', linewidth=1.0)
-                     ax1.axvline(x=0, color=COLORS['annotation'], linestyle=':', linewidth=1.0, alpha=0.7)
+                    # --- Axes and Legend ---
+                    ax1.axhline(y=0, color=COLORS['grid'], linestyle='--', linewidth=1.0)
+                    ax1.axvline(x=0, color=COLORS['annotation'], linestyle=':', linewidth=1.0, alpha=0.7)
 
-                     # Create Custom Legend
+                    # Create Custom Legend
                     #  handles = [
                     #      plt.Line2D([0], [0], color=COLORS['critical'], linewidth=2.0, marker='o', markersize=5, label='Outbreak Diff'),
                     #      plt.Line2D([0], [0], color=COLORS['control'], linewidth=2.0, marker='s', markersize=5, label='Control Diff'),
@@ -1364,7 +1627,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                     #      plt.Line2D([0], [0], color=COLORS['upright'], linestyle='--', linewidth=1.5, marker='s', markersize=3, alpha=0.5, label='Control Upright'),
                     #      plt.Line2D([0], [0], color=COLORS['hanging'], linestyle='--', linewidth=1.5, marker='s', markersize=3, alpha=0.5, label='Control Hanging'),
                     #  ]
-                     handles = [
+                    handles = [
                         plt.Line2D([0], [0], color=COLORS['critical'], linewidth=2.0, marker='o', markersize=5, label='Ausbruch Index'),
                         plt.Line2D([0], [0], color=COLORS['control'], linewidth=2.0, marker='s', markersize=5, label='Kontrolle Index'),
                         plt.Line2D([0], [0], color=COLORS['upright'], linestyle='--', linewidth=1.5, marker='o', markersize=3, alpha=0.7, label='Ausbruch Aufrecht'),
@@ -1372,15 +1635,15 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                         plt.Line2D([0], [0], color=COLORS['upright'], linestyle='--', linewidth=1.5, marker='s', markersize=3, alpha=0.5, label='Kontrolle Aufrecht'),
                         plt.Line2D([0], [0], color=COLORS['hanging'], linestyle='--', linewidth=1.5, marker='s', markersize=3, alpha=0.5, label='Kontrolle Hängend'),
                     ]
-                     ax1.legend(handles=handles, loc='lower left', frameon=True, fontsize=8) # Smaller font size
+                    ax1.legend(handles=handles, loc='lower left', frameon=True, fontsize=8) # Smaller font size
 
-                     # Add N counts
-                     # n_outbreak = data_comp['outbreak']['n_pens']
-                     # n_control = data_comp['control']['n_pens']
-                     # self._add_stats_annotation(ax1, f"N(Outbreak)={n_outbreak}\nN(Control)={n_control}", loc='upper left', fontsize=8)
+                    # Add N counts
+                    # n_outbreak = data_comp['outbreak']['n_pens']
+                    # n_control = data_comp['control']['n_pens']
+                    # self._add_stats_annotation(ax1, f"N(Outbreak)={n_outbreak}\nN(Control)={n_control}", loc='upper left', fontsize=8)
 
         if not plotted_b:
-             ax1.text(0.5, 0.5, 'Insufficient Data for Comparison', ha='center', va='center', color=COLORS['annotation'])
+            ax1.text(0.5, 0.5, 'Insufficient Data for Comparison', ha='center', va='center', color=COLORS['annotation'])
 
         # ax1.set_title('B) Posture Diff & Components: Outbreak vs. Control')
         # ax1.set_xlabel('Days Before Removal/Reference')
@@ -1406,11 +1669,80 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             self.logger.error(f"Failed to save posture component visualization: {e}")
         finally:
             plt.close(fig)
+        
+        # Collect statistics for logging
+        stats_to_log = {
+            'dataset_info': {
+                'outbreak_components': {
+                    'count': len(outbreak_components) if outbreak_components is not None else 0,
+                    'pens': len(outbreak_components['pen'].unique()) if outbreak_components is not None else 0,
+                },
+                'control_components': {
+                    'count': len(control_components) if has_controls else 0,
+                    'pens': len(control_components['pen'].unique()) if has_controls else 0,
+                }
+            },
+            'outbreak_trajectories': {},
+            'comparison_data': {}
+        }
+        
+        # Add outbreak component trajectories (Panel A data)
+        if plotted_a:
+            for metric, data in outbreak_metric_data.items():
+                stats_to_log['outbreak_trajectories'][metric] = data
+        
+        # Add comparison data (Panel B data)
+        if plotted_b and comparison_data:
+            common_days = comparison_data['common_days']
+            days_x = comparison_data['days_x']
+            data_comp = comparison_data['data_comp']
+            
+            stats_to_log['comparison_data'] = {
+                'common_days': [int(d) for d in common_days],
+                'days_x': [int(d) for d in days_x],
+                'valid_indices': valid_indices_plot.tolist() if 'valid_indices_plot' in locals() else [],
+                'x_plot_comp': x_plot_comp.tolist() if 'x_plot_comp' in locals() else [],
+                'metrics': {}
+            }
+            
+            for metric in ['posture_diff', 'upright_tails', 'hanging_tails']:
+                stats_to_log['comparison_data']['metrics'][metric] = {
+                    'outbreak': {
+                        'mean': [float(v) if not np.isnan(v) else None for v in data_comp['outbreak'][metric]['mean']],
+                        'std': [float(v) if not np.isnan(v) else None for v in data_comp['outbreak'][metric]['std']],
+                        'count': [int(v) for v in data_comp['outbreak'][metric]['count']]
+                    },
+                    'control': {
+                        'mean': [float(v) if not np.isnan(v) else None for v in data_comp['control'][metric]['mean']],
+                        'std': [float(v) if not np.isnan(v) else None for v in data_comp['control'][metric]['std']],
+                        'count': [int(v) for v in data_comp['control'][metric]['count']]
+                    }
+                }
+            
+            # Add means and stats for valid plot points (after filtering)
+            if 'valid_indices_plot' in locals() and 'x_plot_comp' in locals():
+                for group in ['outbreak', 'control']:
+                    for metric in ['posture_diff', 'upright_tails', 'hanging_tails']:
+                        key = f"{group}_{metric}_valid"
+                        var_name = f"means_{group[0]}_{metric.split('_')[0]}"
+                        if var_name in locals():
+                            stats_to_log['comparison_data']['metrics'][metric][f"{group}_valid"] = {
+                                'x': x_plot_comp.tolist(),
+                                'mean': [float(v) for v in locals()[var_name]]
+                            }
+        
+        # Add change and contribution statistics
+        if change_stats:
+            stats_to_log['change_statistics'] = change_stats
+        if contribution_stats:
+            stats_to_log['contribution_statistics'] = contribution_stats
+        
+        # Log the statistics
+        self.log_visualization_stats(stats_to_log, 'posture_components')
 
         self.component_analysis = component_analysis # Store results
         return component_analysis
         
-    
     def visualize_data_completeness(self, save_path=None):
         """
         Generates a publication-quality timeline plot visualizing data availability
@@ -1478,7 +1810,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             # Handle the potential different structures in excluded_elements for consecutive_missing
             for item in self.excluded_elements.get('consecutive_missing', []):
                 # Different unpacking approaches depending on tuple structure
-                if len(item) >= 2:  # At minimum we need camera and date_span
+                if len(item) >= 2:
                     try:
                         if isinstance(item, tuple) and len(item) == 5:
                             camera, date_span, pen_type, value, threshold = item
@@ -1507,7 +1839,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             # Handle the potential different structures in excluded_elements for missing_percentage 
             for item in self.excluded_elements.get('missing_percentage', []):
                 # Different unpacking approaches depending on tuple structure
-                if len(item) >= 2:  # At minimum we need camera and date_span
+                if len(item) >= 2:
                     try:
                         if isinstance(item, tuple) and len(item) == 5:
                             camera, date_span, pen_type, value, threshold = item
@@ -1761,7 +2093,6 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                        height=bar_height, color=consecutive_exclude_color, alpha=0.4,
                        hatch='////', edgecolor=consecutive_exclude_color, linewidth=1.5,
                        zorder=4)  # Higher z-order to ensure visibility above missing markers
-                # Log that we're actually highlighting this event
                 self.logger.info(f"Highlighting consecutive exclusion: {event['camera']}/{event['date_span']}")
                        
             elif event['excluded_percentage']:
@@ -1770,7 +2101,6 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                        height=bar_height, color=percentage_exclude_color, alpha=0.4,
                        hatch='\\\\\\\\', edgecolor=percentage_exclude_color, linewidth=1.5,
                        zorder=4)  # Higher z-order to ensure visibility above missing markers
-                # Log that we're actually highlighting this event
                 self.logger.info(f"Highlighting percentage exclusion: {event['camera']}/{event['date_span']}")
 
             # Visualize missing dates with grey markers - set to middle z-order
@@ -1888,694 +2218,3 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             plt.close(fig)
             
         return save_path
-
-    # def visualize_monitoring_thresholds(self, threshold_results=None, save_path=None):
-    #     """
-    #     Create visualizations of monitoring threshold analysis showing:
-    #     1. ROC curves for different metrics
-    #     2. Warning time distributions
-    #     3. Threshold crossings on example trajectories
-    #     4. Performance metrics across different threshold levels
-    #     5. Recommended thresholds with practical guidance
-
-    #     Parameters:
-    #         threshold_results: Results from analyze_monitoring_thresholds()
-    #         save_path: Path to save visualization
-
-    #     Returns:
-    #         dict: Updated threshold results with visualization paths
-    #     """
-    #     self.logger.info("Visualizing monitoring threshold analysis...")
-
-    #     # Run threshold analysis if not already done
-    #     if threshold_results is None:
-    #         # In a class context, you would likely call self.analyze_monitoring_thresholds()
-    #         # For standalone testing, ensure threshold_results is passed or loaded.
-    #         # Re-running analysis here might be redundant if already done.
-    #         # threshold_results = self.analyze_monitoring_thresholds() # Assuming this runs it
-    #         pass # Assume threshold_results is passed in for now
-
-    #     if threshold_results is None or not isinstance(threshold_results, dict) or 'metrics' not in threshold_results:
-    #         self.logger.error("Threshold analysis failed or returned invalid/missing results.")
-    #         return None
-
-    #     # --- Create Figure ---
-    #     fig_size = self.config.get('fig_size_thresholds', (14, 16))
-    #     fig = plt.figure(figsize=fig_size, constrained_layout=False) # Use constrained_layout=False with manual adjustments
-    #     gs = gridspec.GridSpec(3, 2, height_ratios=[1, 1, 1], width_ratios=[1, 1],
-    #                         figure=fig, hspace=0.45, wspace=0.25) # Adjust spacing
-
-    #     # Define colors for different metrics
-    #     metric_colors = {
-    #         'posture_diff': COLORS.get('difference', '#1f77b4'), # Use .get for safety
-    #         'posture_diff_3d_slope': '#0077B6',  # Blue
-    #         'posture_diff_7d_slope': '#00B4D8',  # Lighter blue
-    #         'num_tails_upright': COLORS.get('upright', '#2ca02c'),
-    #         'num_tails_hanging': COLORS.get('hanging', '#d62728'),
-    #     }
-    #     default_color = '#666666'  # Gray for any undefined metrics
-
-    #     # Get metrics list
-    #     # Use the more detailed 'metrics_to_evaluate' if available, otherwise fallback
-    #     metrics_info_list = threshold_results.get('metrics_to_evaluate', [])
-    #     if not metrics_info_list:
-    #         evaluated_metrics = threshold_results.get('metrics', {}).get('evaluated', [])
-    #         # Create minimal info if only names are available
-    #         metrics_info_list = [{'name': name, 'display_name': name.replace('_', ' ').title()} for name in evaluated_metrics]
-    #     else:
-    #         evaluated_metrics = [m['name'] for m in metrics_info_list]
-
-
-    #     # Create display name lookup from metrics_info_list
-    #     metrics_display = {info['name']: info.get('display_name', info['name']) for info in metrics_info_list}
-
-    #     # Get the best overall metric if available
-    #     best_metric = threshold_results.get('overall_best_metric')
-    #     best_metric_display = threshold_results.get('overall_best_metric_display') # Already retrieved, use if available
-
-    #     # --- Panel A: ROC-like Curve (Sensitivity vs. Specificity) ---
-    #     ax0 = fig.add_subplot(gs[0, 0])
-    #     ax0.set_title('A) ROC Analysis (Training Set)', fontsize=11, fontweight='bold', loc='left', pad=7)
-
-    #     # Check if we have control data for specificity
-    #     has_control_data = threshold_results.get('data_counts', {}).get('control_trajectories', 0) > 0
-
-    #     plotted_metrics_roc = [] # Keep track of metrics plotted
-    #     if has_control_data:
-    #         # Plot ROC-like curves for each metric
-    #         for metric_info in metrics_info_list:
-    #             metric_name = metric_info['name']
-    #             # Get performance data if available in recommendations
-    #             if metric_name in threshold_results.get('recommendations', {}):
-    #                 recommendation = threshold_results['recommendations'][metric_name]
-    #                 best_percentile = recommendation.get('best_percentile')
-    #                 # Use performance on TRAINING data for this plot
-    #                 performance = recommendation.get('performance_on_training', {})
-
-    #                 # Get points for different candidate thresholds if available
-    #                 points = []
-    #                 candidate_values = threshold_results.get('thresholds', {}).get(metric_name, {}).get('candidate_values', {})
-    #                 candidate_perf = recommendation.get('candidate_performance', {}) # Assuming this might exist, or recalculate
-
-    #                 # Fallback: Plot only the best point if candidate data is missing
-    #                 if 'sensitivity' in performance and 'specificity' in performance:
-    #                     points.append((1 - performance['specificity'],
-    #                                 performance['sensitivity'],
-    #                                 best_percentile)) # Use the selected best percentile
-
-    #                 # Sort by specificity (x-axis) for plotting line if multiple points existed
-    #                 points.sort(key=lambda p: p[0])
-
-    #                 # Check if we have points to plot
-    #                 if points:
-    #                     # Unzip points
-    #                     x, y, labels = zip(*points)
-
-    #                     # Plot points (use markers only if plotting single best point per metric)
-    #                     metric_color = metric_colors.get(metric_name, default_color)
-    #                     metric_label = metrics_display.get(metric_name, metric_name)
-    #                     ax0.plot(x, y, 'o', color=metric_color, label=metric_label, markersize=7) # Plot points
-    #                     plotted_metrics_roc.append(metric_name)
-
-    #                     # Mark best overall point if this is the best metric
-    #                     if metric_name == best_metric and best_percentile is not None:
-    #                         best_point = points[0] # Since we only have one point per metric currently
-    #                         ax0.plot(best_point[0], best_point[1], 'o', color=metric_color,
-    #                                 markersize=10, markeredgecolor='black', markeredgewidth=1.5)
-    #                         ax0.annotate(f"Best: {best_percentile}%",
-    #                                     xy=(best_point[0], best_point[1]),
-    #                                     xytext=(10, 0), textcoords="offset points",
-    #                                     fontsize=9, fontweight='bold')
-
-    #         # Add reference line
-    #         ax0.plot([0, 1], [0, 1], 'k--', alpha=0.3, label='Random')
-
-    #         # Add grid and labels
-    #         ax0.grid(True, linestyle=':', alpha=0.7)
-    #         ax0.set_xlabel('False Positive Rate (1 - Specificity)', fontsize=10)
-    #         ax0.set_ylabel('True Positive Rate (Sensitivity)', fontsize=10)
-
-    #         # Set axis limits
-    #         ax0.set_xlim([-0.02, 1.02])
-    #         ax0.set_ylim([-0.02, 1.02])
-
-    #     else:
-    #         # --- Alternative Panel A if no control data ---
-    #         ax0.set_title('A) Sensitivity by Threshold (Training Set)', fontsize=11, fontweight='bold', loc='left', pad=7)
-    #         # Plot sensitivity curve by threshold percentile
-    #         for metric_info in metrics_info_list:
-    #             metric_name = metric_info['name']
-    #             # Get performance data if available in recommendations
-    #             if metric_name in threshold_results.get('recommendations', {}):
-    #                 recommendation = threshold_results['recommendations'][metric_name]
-    #                 best_percentile = recommendation.get('best_percentile')
-    #                 # Get candidate performance data (need sensitivity per percentile)
-    #                 candidate_perf = recommendation.get('candidate_scores', {}) # Using scores dict for percentiles
-
-    #                 points = []
-    #                 # Need candidate_performance dict mapping percentile -> {sensitivity: val, ...}
-    #                 # This structure isn't directly in the provided JSON, let's use the single best point
-    #                 if 'performance_on_training' in recommendation:
-    #                     perf = recommendation['performance_on_training']
-    #                     if 'sensitivity' in perf and best_percentile is not None:
-    #                         points.append((best_percentile, perf['sensitivity']))
-
-    #                 # Check if we have points to plot
-    #                 if points:
-    #                     # Unzip points
-    #                     x, y = zip(*points)
-
-    #                     # Plot sensitivity point
-    #                     metric_color = metric_colors.get(metric_name, default_color)
-    #                     metric_label = metrics_display.get(metric_name, metric_name)
-    #                     ax0.plot(x, y, 'o', color=metric_color, label=metric_label, markersize=7)
-    #                     plotted_metrics_roc.append(metric_name)
-
-    #                     # Mark best point if this is the best metric
-    #                     if metric_name == best_metric and best_percentile is not None:
-    #                         best_point = points[0]
-    #                         ax0.plot(best_point[0], best_point[1], 'o', color=metric_color,
-    #                                 markersize=10, markeredgecolor='black', markeredgewidth=1.5)
-    #                         ax0.annotate(f"Best: {best_percentile}%",
-    #                                     xy=(best_point[0], best_point[1]),
-    #                                     xytext=(10, 0), textcoords="offset points",
-    #                                     fontsize=9, fontweight='bold')
-
-    #         # Add grid and labels
-    #         ax0.grid(True, linestyle=':', alpha=0.7)
-    #         ax0.set_xlabel('Threshold Percentile', fontsize=10)
-    #         ax0.set_ylabel('Sensitivity', fontsize=10)
-
-    #         # Set axis limits
-    #         ax0.set_xlim([0, 100])
-    #         ax0.set_ylim([-0.02, 1.02])
-
-    #     # Add legend for Panel A (only if metrics were plotted)
-    #     if plotted_metrics_roc:
-    #         ax0.legend(loc='lower right', frameon=True, fontsize=9)
-    #     else:
-    #         ax0.text(0.5, 0.5, 'No suitable metrics found for ROC plot', ha='center', va='center', color='gray')
-
-
-    #     # --- Panel B: Warning Time Distribution (Training Set) ---
-    #     ax1 = fig.add_subplot(gs[0, 1])
-    #     ax1.set_title('B) Warning Time Distribution (Training Set)', fontsize=11, fontweight='bold', loc='left', pad=7)
-
-    #     warning_data_raw = {}
-    #     warning_means = {}
-    #     metrics_with_warning_data = []
-
-    #     for metric_info in metrics_info_list:
-    #         metric_name = metric_info['name']
-    #         if metric_name in threshold_results.get('recommendations', {}):
-    #             recommendation = threshold_results['recommendations'][metric_name]
-    #             # Use warning time on TRAINING data
-    #             warning_stats = recommendation.get('warning_time_on_training', {})
-
-    #             # Only add if we have raw warning times for boxplot
-    #             if 'raw_times' in warning_stats and warning_stats['raw_times']:
-    #                 warning_data_raw[metric_name] = warning_stats['raw_times']
-    #                 warning_means[metric_name] = warning_stats.get('mean', 0)
-    #                 metrics_with_warning_data.append(metric_name)
-    #             elif 'mean' in warning_stats: # Fallback if no raw times but mean exists
-    #                 warning_means[metric_name] = warning_stats['mean']
-    #                 metrics_with_warning_data.append(metric_name)
-    #                 # Optionally create synthetic data here if needed for visualization consistency
-    #                 # warning_data_raw[metric_name] = [warning_stats['mean']] # Simple placeholder
-
-
-    #     if metrics_with_warning_data:
-    #         # Sort metrics by mean warning time (descending)
-    #         sorted_metrics = sorted(metrics_with_warning_data, key=lambda m: warning_means.get(m, 0), reverse=True)
-
-    #         # Prepare data for box plot (only those with raw data)
-    #         bp_data = [warning_data_raw[m] for m in sorted_metrics if m in warning_data_raw]
-    #         bp_labels_raw = [metrics_display.get(m, m) for m in sorted_metrics if m in warning_data_raw]
-    #         bp_labels_mean = [f"{warning_means.get(m, 0):.1f}d" for m in sorted_metrics if m in warning_data_raw]
-    #         bp_labels = [f"{raw}\n({mean})" for raw, mean in zip(bp_labels_raw, bp_labels_mean)]
-
-
-    #         if bp_data: # Ensure we actually have data for boxplot
-    #             # Create box plots
-    #             box_colors = [metric_colors.get(m, default_color) for m in sorted_metrics if m in warning_data_raw]
-    #             bp = ax1.boxplot(bp_data, labels=bp_labels, patch_artist=True, showfliers=False, widths=0.6)
-
-    #             # Color the boxes
-    #             for patch, color in zip(bp['boxes'], box_colors):
-    #                 patch.set_facecolor(color)
-    #                 patch.set_alpha(0.7)
-
-    #             # Color the medians
-    #             for median in bp['medians']:
-    #                 median.set_color('black')
-    #                 median.set_linewidth(1.5)
-
-    #             # Add vertical grid lines
-    #             ax1.yaxis.grid(True, linestyle=':', alpha=0.7)
-    #             ax1.set_ylabel("Advance Warning Time (Days)", fontsize=10)
-
-    #             # Highlight the best metric's box if it has data
-    #             best_metric_idx = None
-    #             if best_metric in warning_data_raw and best_metric in sorted_metrics:
-    #                 try:
-    #                     # Get index within the subset that has raw data
-    #                     sorted_metrics_raw = [m for m in sorted_metrics if m in warning_data_raw]
-    #                     best_metric_idx = sorted_metrics_raw.index(best_metric)
-    #                     best_metric_x = best_metric_idx + 1  # Box plot indices start at 1
-
-    #                     # Highlight the best metric's box
-    #                     if 'boxes' in bp and len(bp['boxes']) > best_metric_idx:
-    #                         bp['boxes'][best_metric_idx].set_edgecolor('black')
-    #                         bp['boxes'][best_metric_idx].set_linewidth(2)
-    #                         # Add annotation slightly above the box
-    #                         box_top = bp['caps'][best_metric_idx*2 + 1].get_ydata()[0] # Top whisker
-    #                         ax1.annotate("Best Metric",
-    #                                 xy=(best_metric_x, box_top),
-    #                                 xytext=(0, 5), textcoords="offset points",
-    #                                 fontsize=9, fontweight='bold', ha='center', va='bottom',
-    #                                 # arrowprops=dict(arrowstyle="->", color='black') # Optional arrow
-    #                                 )
-    #                 except ValueError:
-    #                     self.logger.debug(f"Best metric {best_metric} not found in metrics with raw warning times for highlighting.")
-
-
-    #             # Add reference lines from config
-    #             ref_lines = self.config.get('warning_time_ref_lines', [3.0, 7.0])
-    #             line_colors = ['#AE2012', '#0A9396', '#EE9B00'] # Red, Teal, Orange/Yellow
-    #             line_labels = ['minimum', 'target', 'ideal'] # Match config intent
-    #             for i, line_val in enumerate(ref_lines):
-    #                 color = line_colors[i % len(line_colors)]
-    #                 label = line_labels[i % len(line_labels)]
-    #                 ax1.axhline(y=line_val, color=color, linestyle='--', alpha=0.7, linewidth=1.5)
-    #                 # Adjust text position to avoid overlap with plot elements
-    #                 ax1.text(ax1.get_xlim()[1]*1.01, line_val, f'{line_val:.0f}d ({label})',
-    #                         va='center', ha='left', color=color, fontsize=8)
-
-    #             # Add sample size indicator
-    #             total_outbreaks_train = threshold_results.get('validation', {}).get('n_train_trajectories', '?')
-    #             ax1.text(0.02, 0.98, f"Based on N={total_outbreaks_train} training trajectories", transform=ax1.transAxes,
-    #                     fontsize=9, va='top', ha='left',
-    #                     bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8))
-
-    #             ax1.tick_params(axis='x', labelsize=9)
-    #             ax1.set_ylim(bottom=max(0, ax1.get_ylim()[0])) # Ensure y-axis starts at 0 or above
-
-    #         else:
-    #             ax1.text(0.5, 0.5, 'No raw warning time data available for boxplot', ha='center', va='center', color='gray', fontsize=10)
-
-
-    #     else:
-    #         ax1.text(0.5, 0.5, 'No warning time data calculated', ha='center', va='center', color='gray', fontsize=10)
-    #     ax1.set_ylabel("Advance Warning Time (Days)", fontsize=10)
-
-
-    #     # --- Panel C: Example Threshold Crossings ---
-    #     ax2 = fig.add_subplot(gs[1, 0])
-    #     ax2.set_title('C) Example Threshold Crossings (Best Metric)', fontsize=11, fontweight='bold', loc='left', pad=7)
-
-    #     # Check if best metric and raw data are available
-    #     raw_data = threshold_results.get('raw_data', {})
-    #     outbreak_trajectories = raw_data.get('train_trajectories', []) # Use training trajectories for consistency
-    #     if not outbreak_trajectories:
-    #         outbreak_trajectories = raw_data.get('outbreak_trajectories', []) # Fallback to all
-
-    #     if best_metric and best_metric in threshold_results.get('recommendations', {}) and outbreak_trajectories:
-    #         recommendation = threshold_results['recommendations'][best_metric]
-    #         best_pct = recommendation.get('best_percentile')
-    #         threshold_value = recommendation.get('threshold_value')
-
-    #         # Get direction for threshold crossing
-    #         metric_direction = 'below' # Default
-    #         metric_units = ''
-    #         for metric_info in metrics_info_list:
-    #             if metric_info['name'] == best_metric:
-    #                 metric_direction = metric_info.get('direction', 'below')
-    #                 metric_units = metric_info.get('units', '')
-    #                 break
-
-    #         # Select up to N random trajectories to display
-    #         n_traj = self.config.get('threshold_example_trajectory_count', 3)
-    #         num_to_show = min(n_traj, len(outbreak_trajectories))
-
-    #         if num_to_show > 0:
-    #             np.random.seed(self.config.get('random_seed', 42)) # Use configured seed
-    #             selected_indices = np.random.choice(len(outbreak_trajectories), num_to_show, replace=False)
-
-    #             # Plot each selected trajectory
-    #             pens_plotted = set() # Avoid duplicate labels if multiple trajectories from same pen
-    #             plot_lines = []
-    #             plot_labels = []
-
-    #             for i, idx in enumerate(selected_indices):
-    #                 trajectory = outbreak_trajectories[idx]
-    #                 if not isinstance(trajectory, pd.DataFrame) or trajectory.empty:
-    #                     continue
-
-    #                 # Skip if best metric not in trajectory
-    #                 if best_metric not in trajectory.columns:
-    #                     self.logger.warning(f"Best metric '{best_metric}' not found in example trajectory index {idx}.")
-    #                     continue
-
-    #                 # Get pen ID for label
-    #                 pen_label = "Unknown Pen"
-    #                 if 'pen' in trajectory.columns:
-    #                     pen_id = trajectory['pen'].iloc[0]
-    #                     # Optional: Add datespan if needed for uniqueness
-    #                     # datespan = trajectory['datespan'].iloc[0] if 'datespan' in trajectory.columns else ''
-    #                     # pen_label = f"{pen_id} ({datespan})" if datespan else pen_id
-    #                     pen_label = str(pen_id) # Keep it simple for the plot legend
-
-    #                 # Get x and y data (ensure numeric types)
-    #                 trajectory['days_before_removal'] = pd.to_numeric(trajectory['days_before_removal'], errors='coerce')
-    #                 trajectory[best_metric] = pd.to_numeric(trajectory[best_metric], errors='coerce')
-    #                 # Drop rows where essential data is missing after coercion
-    #                 traj_filtered = trajectory.dropna(subset=['days_before_removal', best_metric])
-    #                 if traj_filtered.empty: continue
-
-    #                 # Sort by days_before_removal (x-axis)
-    #                 traj_sorted = traj_filtered.sort_values(by='days_before_removal', ascending=False)
-
-    #                 x = traj_sorted['days_before_removal']
-    #                 y = traj_sorted[best_metric]
-    #                 if x.empty or y.empty: continue
-
-
-    #                 # Find the *first* threshold crossing time
-    #                 first_crossing_x = np.nan
-    #                 first_crossing_y = np.nan
-    #                 for days, value in zip(x, y):
-    #                     if pd.isna(value): continue
-    #                     is_crossed = (metric_direction == 'below' and value <= threshold_value) or \
-    #                                 (metric_direction == 'above' and value >= threshold_value)
-    #                     if is_crossed:
-    #                         first_crossing_x = days
-    #                         first_crossing_y = value
-    #                         break # Stop at the first crossing
-
-    #                 # Plot the trajectory
-    #                 line_color = plt.cm.viridis(i / num_to_show) # Use viridis colormap for better variation
-    #                 line, = ax2.plot(x, y, '-', color=line_color, linewidth=1.5, alpha=0.8)
-
-    #                 # Add label only once per pen if desired, or always add if trajectories are unique events
-    #                 # For simplicity, add label for each trajectory line shown
-    #                 plot_lines.append(line)
-    #                 plot_labels.append(pen_label)
-
-
-    #                 # Mark first threshold crossing if found
-    #                 if not pd.isna(first_crossing_x):
-    #                     ax2.plot(first_crossing_x, first_crossing_y, 'o', color=line_color, markersize=7,
-    #                             markeredgecolor='black', markeredgewidth=1.0)
-    #                     # Add days annotation near the marker
-    #                     ax2.annotate(f"{first_crossing_x:.1f}d",
-    #                                 xy=(first_crossing_x, first_crossing_y),
-    #                                 xytext=(5, -5), textcoords="offset points",
-    #                                 fontsize=8, color='black', ha='left', va='top') # Adjusted text position
-
-    #             # Add threshold line
-    #             threshold_label = f"Threshold ({best_pct}th perc.) = {threshold_value:.2f}"
-    #             hline = ax2.axhline(y=threshold_value, color='#AE2012', linestyle='--', linewidth=1.5, alpha=0.9)
-    #             # Add threshold text label (position depends on direction)
-    #             text_y_pos = threshold_value
-    #             va = 'bottom' if metric_direction == 'below' else 'top'
-    #             # Ensure text is within plot bounds
-    #             x_range = ax2.get_xlim()
-    #             text_x_pos = x_range[0] + 0.02 * (x_range[1] - x_range[0]) # Position near left edge
-    #             ax2.text(text_x_pos, text_y_pos, threshold_label, va=va, ha='left',
-    #                     color='#AE2012', fontsize=8, backgroundcolor='white', alpha=0.7)
-
-
-    #             # Add removal day reference line
-    #             ax2.axvline(x=0, color='black', linestyle=':', linewidth=1, alpha=0.7)
-    #             # Add label for removal line, ensuring it's visible
-    #             y_range = ax2.get_ylim()
-    #             ax2.text(0.0, y_range[1], ' Removal', ha='left', va='top', fontsize=9, rotation=90, alpha=0.8)
-
-
-    #             # Add grid and labels
-    #             ax2.grid(True, linestyle=':', alpha=0.7)
-    #             ax2.set_xlabel('Days Before Removal', fontsize=10)
-    #             y_label = best_metric_display or best_metric # Use display name if available
-    #             if metric_units: y_label += f" ({metric_units})"
-    #             ax2.set_ylabel(y_label, fontsize=10)
-
-    #             # Add legend if multiple lines were plotted
-    #             if len(plot_lines) > 1:
-    #                 ax2.legend(plot_lines, plot_labels, loc='best', frameon=True, fontsize=8) # Use 'best' location
-
-    #             # Invert X axis if showing days *before* removal
-    #             if all(x <= 0 for x in ax2.get_lines()[0].get_xdata(orig=False)): # Check if data is mostly <= 0
-    #                 ax2.invert_xaxis()
-    #                 ax2.set_xlabel('Days Before Removal', fontsize=10) # Keep label intuitive
-
-
-    #         else:
-    #             ax2.text(0.5, 0.5, 'No valid example trajectories found', ha='center', va='center', color='gray', fontsize=10)
-
-    #     else:
-    #         message = 'Best metric or raw trajectory data not available'
-    #         if not best_metric: message = 'Best metric not determined'
-    #         elif not outbreak_trajectories: message = 'Raw trajectory data unavailable'
-    #         elif best_metric not in threshold_results['recommendations']: message = f"Recommendations missing for metric '{best_metric}'"
-
-    #         ax2.text(0.5, 0.5, message, ha='center', va='center', color='gray', fontsize=10)
-    #         ax2.set_xlabel('Days Before Removal', fontsize=10)
-    #         ax2.set_ylabel('Metric Value', fontsize=10)
-
-
-    #     # --- Panel D: Performance Metrics (Sensitivity/Specificity) at Best Threshold ---
-    #     ax3 = fig.add_subplot(gs[1, 1])
-    #     title_metric_name = best_metric_display or (best_metric if best_metric else "Metric")
-    #     ax3.set_title(f'D) Performance at Optimal Threshold ({title_metric_name})',
-    #                 fontsize=11, fontweight='bold', loc='left', pad=7)
-
-    #     if best_metric and best_metric in threshold_results.get('recommendations', {}):
-    #         recommendation = threshold_results['recommendations'][best_metric]
-    #         best_pct = recommendation.get('best_percentile')
-    #         threshold_value = recommendation.get('threshold_value')
-
-    #         # Get performance on TRAINING set
-    #         performance_train = recommendation.get('performance_on_training', {})
-    #         sens_train = performance_train.get('sensitivity')
-    #         spec_train = performance_train.get('specificity') if has_control_data else None
-    #         acc_train = (sens_train + spec_train) / 2 if sens_train is not None and spec_train is not None else sens_train # Balanced accuracy or just sensitivity
-
-    #         # Get performance on HOLDOUT set if available
-    #         holdout_eval = threshold_results.get('validation', {}).get('holdout_evaluation', {})
-    #         performance_holdout = holdout_eval.get(best_metric, {})
-    #         sens_holdout = performance_holdout.get('sensitivity')
-    #         spec_holdout = performance_holdout.get('specificity') if has_control_data else None
-    #         acc_holdout = performance_holdout.get('balanced_accuracy') # Use pre-calculated BA
-
-    #         metrics_plot = ['Sensitivity', 'Specificity', 'Accuracy']
-    #         values_train = [sens_train, spec_train, acc_train]
-    #         values_holdout = [sens_holdout, spec_holdout, acc_holdout]
-
-    #         # Filter out None values if specificity is not available
-    #         if not has_control_data:
-    #             metrics_plot = ['Sensitivity']
-    #             values_train = [sens_train]
-    #             values_holdout = [sens_holdout]
-
-
-    #         x_pos = np.arange(len(metrics_plot))
-    #         width = 0.35
-
-    #         colors_train = ['#0A9396', '#AE2012', '#EE9B00'] # Teal, Red, Orange
-    #         colors_holdout = ['#94D2BD', '#BB3E03', '#E9C46A'] # Lighter versions
-
-    #         bars_train, bars_holdout = None, None # Initialize
-
-    #         # Plot training bars
-    #         if any(v is not None for v in values_train): # Check if there's data to plot
-    #             bars_train = ax3.bar(x_pos - width/2, [v if v is not None else 0 for v in values_train], width, label='Training Set',
-    #                                 color=[colors_train[i] for i,v in enumerate(values_train)])
-
-    #             # Add value labels for training bars
-    #             for i, bar in enumerate(bars_train):
-    #                 height = bar.get_height()
-    #                 if values_train[i] is not None: # Only label if value exists
-    #                     ax3.annotate(f'{height:.2f}',
-    #                                 xy=(bar.get_x() + bar.get_width() / 2, height),
-    #                                 xytext=(0, 3), textcoords="offset points",
-    #                                 ha='center', va='bottom', fontsize=9)
-
-    #         # Plot holdout bars if data exists
-    #         if any(v is not None for v in values_holdout):
-    #             bars_holdout = ax3.bar(x_pos + width/2, [v if v is not None else 0 for v in values_holdout], width, label='Holdout Set',
-    #                                 color=[colors_holdout[i] for i,v in enumerate(values_holdout)])
-    #             # Add value labels for holdout bars
-    #             for i, bar in enumerate(bars_holdout):
-    #                 height = bar.get_height()
-    #                 if values_holdout[i] is not None:
-    #                     ax3.annotate(f'{height:.2f}',
-    #                                 xy=(bar.get_x() + bar.get_width() / 2, height),
-    #                                 xytext=(0, 3), textcoords="offset points",
-    #                                 ha='center', va='bottom', fontsize=9, alpha=0.9)
-
-
-    #         # Add grid and labels
-    #         ax3.grid(axis='y', linestyle=':', alpha=0.7)
-    #         ax3.set_ylabel('Performance Metric Value', fontsize=10)
-    #         ax3.set_xticks(x_pos)
-    #         ax3.set_xticklabels(metrics_plot, fontsize=10)
-    #         ax3.set_ylim([0, 1.1]) # Set fixed ylim for performance
-
-    #         # Add legend
-    #         ax3.legend(loc='best', frameon=True, fontsize=9)
-
-    #         # Add threshold info text box
-    #         threshold_text = f"Optimal Threshold:\n{best_pct}th percentile\nValue: {threshold_value:.3f}"
-    #         ax3.text(0.98, 0.02, threshold_text, transform=ax3.transAxes,
-    #                 fontsize=9, va='bottom', ha='right',
-    #                 bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9))
-
-    #         # Optional: Add confidence intervals from stability analysis if available
-    #         stability_info = recommendation.get('threshold_sensitivity', {})
-    #         sens_ci = stability_info.get('sensitivity_confidence_interval')
-    #         spec_ci = stability_info.get('specificity_confidence_interval')
-
-    #         # Add error bars (representing CI) if data available
-    #         if bars_train and sens_ci and len(sens_ci) == 2:
-    #             sens_err = (sens_ci[1] - sens_ci[0]) / 2
-    #             ax3.errorbar(x_pos[0] - width/2, values_train[0], yerr=sens_err, fmt='none', ecolor='black', capsize=3)
-    #         if bars_train and spec_ci and len(spec_ci) == 2 and has_control_data and len(values_train)>1 and values_train[1] is not None:
-    #             spec_err = (spec_ci[1] - spec_ci[0]) / 2
-    #             ax3.errorbar(x_pos[1] - width/2, values_train[1], yerr=spec_err, fmt='none', ecolor='black', capsize=3)
-
-
-    #     else:
-    #         ax3.text(0.5, 0.5, 'Performance data not available\nfor the best metric.',
-    #                 ha='center', va='center', color='gray', fontsize=10)
-    #         ax3.set_ylim([0, 1.1])
-    #         ax3.set_ylabel('Performance Metric Value', fontsize=10)
-
-
-    #     # --- Panel E: Cross-Validation Performance --- (Renamed from F to E)
-    #     ax4 = fig.add_subplot(gs[2, 0])
-    #     ax4.set_title('E) Cross-Validation Performance (Mean over Folds)', fontsize=11, fontweight='bold', loc='left', pad=7)
-
-    #     cv_results = threshold_results.get('validation', {}).get('cross_validation', {})
-
-    #     if cv_results and any(m in cv_results for m in evaluated_metrics):
-    #         metrics_to_plot_cv = []
-    #         mean_sensitivities_cv = []
-    #         mean_specificities_cv = []
-    #         std_sens_cv = [] # For error bars
-    #         std_spec_cv = [] # For error bars
-    #         labels_cv = []
-
-    #         # Gather CV summary data for evaluated metrics that have results
-    #         for metric_info in metrics_info_list:
-    #             metric_name = metric_info['name']
-    #             if metric_name in cv_results:
-    #                 metric_cv_data = cv_results[metric_name]
-    #                 if 'summary' in metric_cv_data and metric_cv_data['summary']: # Check summary exists and is not empty
-    #                     summary = metric_cv_data['summary']
-    #                     metrics_to_plot_cv.append(metric_name)
-    #                     mean_sensitivities_cv.append(summary.get('mean_test_sensitivity', 0))
-    #                     mean_specificities_cv.append(summary.get('mean_test_specificity', 0) if has_control_data else 0) # Only plot spec if controls exist
-    #                     # Get std deviations if available in summary (need to ensure they were calculated)
-    #                     std_sens_cv.append(metric_cv_data.get('std_test_sensitivity', 0)) # Look for std in main metric dict
-    #                     std_spec_cv.append(metric_cv_data.get('std_test_specificity', 0)) # Look for std in main metric dict
-
-    #                     labels_cv.append(metrics_display.get(metric_name, metric_name))
-
-
-    #         if metrics_to_plot_cv: # Proceed if we found CV data for at least one metric
-    #             x_cv = np.arange(len(metrics_to_plot_cv))
-    #             width_cv = 0.35
-
-    #             # Colors consistent with Panel D
-    #             sens_color_cv = '#0A9396'
-    #             spec_color_cv = '#AE2012'
-
-    #             # Plot Sensitivity bars
-    #             sens_bars_cv = ax4.bar(x_cv - width_cv/2, mean_sensitivities_cv, width_cv, label='Mean Sensitivity',
-    #                                 color=sens_color_cv, yerr=std_sens_cv, capsize=3, ecolor='darkgrey')
-
-    #             # Plot Specificity bars only if control data exists
-    #             spec_bars_cv = None
-    #             if has_control_data:
-    #                 spec_bars_cv = ax4.bar(x_cv + width_cv/2, mean_specificities_cv, width_cv, label='Mean Specificity',
-    #                                     color=spec_color_cv, yerr=std_spec_cv, capsize=3, ecolor='darkgrey')
-
-    #             # Add value labels centered above bars (adjusted for error bars)
-    #             for i, bar in enumerate(sens_bars_cv):
-    #                 height = bar.get_height()
-    #                 y_pos = height + std_sens_cv[i] + 0.01 # Position above error bar
-    #                 ax4.annotate(f'{height:.2f}',
-    #                             xy=(bar.get_x() + bar.get_width() / 2, y_pos),
-    #                             xytext=(0, 3), textcoords="offset points",
-    #                             ha='center', va='bottom', fontsize=8)
-
-    #             if spec_bars_cv:
-    #                 for i, bar in enumerate(spec_bars_cv):
-    #                     height = bar.get_height()
-    #                     y_pos = height + std_spec_cv[i] + 0.01
-    #                     ax4.annotate(f'{height:.2f}',
-    #                                 xy=(bar.get_x() + bar.get_width() / 2, y_pos),
-    #                                 xytext=(0, 3), textcoords="offset points",
-    #                                 ha='center', va='bottom', fontsize=8)
-
-    #             # Customize plot
-    #             ax4.set_ylabel('Mean Test Performance', fontsize=10)
-    #             ax4.set_xticks(x_cv)
-    #             ax4.set_xticklabels(labels_cv, rotation=45, ha='right', fontsize=9)
-    #             ax4.legend(loc='best', frameon=True, fontsize=9)
-    #             ax4.grid(axis='y', linestyle=':', alpha=0.7)
-    #             ax4.set_ylim([0, 1.15]) # Extend ylim slightly for labels
-
-    #             # Add performance target line
-    #             target_line = self.config.get('cv_performance_target_line', 0.8)
-    #             ax4.axhline(y=target_line, color='green', linestyle='--', alpha=0.6, linewidth=1.5)
-    #             ax4.text(ax4.get_xlim()[1]*0.98, target_line + 0.01, f'Target ({target_line:.1f})',
-    #                     ha='right', va='bottom', fontsize=8, color='green')
-
-    #             # Add cross-validation details text box
-    #             cv_method = threshold_results.get('validation', {}).get('method', 'N/A')
-    #             n_folds = 'N/A'
-    #             # Try to get n_folds from the first metric's summary
-    #             first_metric = metrics_to_plot_cv[0]
-    #             n_folds = cv_results.get(first_metric, {}).get('summary', {}).get('n_folds', 'N/A')
-
-    #             cv_details_text = f"Method: {cv_method}\nFolds/Pens: {n_folds}"
-    #             ax4.text(0.02, 0.98, cv_details_text, transform=ax4.transAxes,
-    #                     ha='left', va='top', fontsize=8, color='black',
-    #                     bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
-    #         else:
-    #             ax4.text(0.5, 0.5, 'No cross-validation summary data found', ha='center', va='center', color='gray')
-
-
-    #     else:
-    #         ax4.text(0.5, 0.5, 'Cross-validation data not available', ha='center', va='center', color='gray')
-    #         ax4.set_ylim([0, 1.1])
-
-    #     # --- Overall Figure Adjustments ---
-    #     fig.suptitle('Monitoring Threshold Analysis Results', fontsize=14, fontweight='bold', y=0.98)
-
-    #     # Adjust layout manually *after* plotting everything
-    #     # fig.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust rect to prevent suptitle overlap
-    #     plt.subplots_adjust(top=0.92, bottom=0.05, left=0.08, right=0.95, hspace=0.45, wspace=0.25)
-
-    #     # Save figure
-    #     if save_path is None:
-    #         filename = self.config.get('viz_thresholds_filename', 'monitoring_threshold_analysis.png')
-    #         save_path = os.path.join(self.config['output_dir'], filename)
-
-    #     try:
-    #         # Ensure output directory exists
-    #         os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    #         dpi = self.config.get('figure_dpi', 600)
-    #         plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
-    #         self.logger.info(f"Saved monitoring threshold visualization to {save_path}")
-    #     except Exception as e:
-    #         self.logger.error(f"Failed to save monitoring threshold visualization: {e}", exc_info=True) # Add traceback info
-
-    #     plt.close(fig)
-
-    #     # Add visualization path to results
-    #     if threshold_results and isinstance(threshold_results, dict):
-    #         threshold_results['visualization_path'] = save_path
-
-    #     return threshold_results

@@ -15,6 +15,7 @@ significance_level: 0.05
 min_control_dates_threshold: 8
 control_date_margin: 5
 min_control_analysis_dates: 2
+min_sample_values_comparison: 10
 control_samples_per_pen: 5
 comparison_metrics: ['value_at_removal', '1d_window_avg', '3d_window_avg', '5d_window_avg', '7d_window_avg', '1d_window_slope', '3d_window_slope', '5d_window_slope', '7d_window_slope', 'abs_change_1d', 'abs_change_3d', 'abs_change_5d', 'abs_change_7d']
 figure_dpi: 600

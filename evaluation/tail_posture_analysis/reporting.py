@@ -1,4 +1,3 @@
-# reporting.py
 import os
 import numpy as np
 import pandas as pd
@@ -43,7 +42,7 @@ class TailPostureReporter(TailPostureVisualizer):
             
             json_data = load_json_data(self.path_manager.path_to_piglet_rearing_info)
             
-            # Initialize counters and collections for enhanced statistics
+            # Initialize counters and collections for statistics
             total_tb_pens = 0
             total_control_pens = 0
             removal_dates = []
@@ -51,15 +50,14 @@ class TailPostureReporter(TailPostureVisualizer):
             removal_counts_per_pen = {}
             datespan_coverage = {}  # Track coverage percentages
             
-            # Initialisiere Zähler für relative Positionierung der Entfernungen
             relative_removal_positions = {
-                "first_quintile": 0,   # 0-20% des Durchlaufs
-                "second_quintile": 0,  # 21-40% des Durchlaufs
-                "third_quintile": 0,   # 41-60% des Durchlaufs
-                "fourth_quintile": 0,  # 61-80% des Durchlaufs
-                "fifth_quintile": 0    # 81-100% des Durchlaufs
+                "first_quintile": 0,
+                "second_quintile": 0,
+                "third_quintile": 0,
+                "fourth_quintile": 0,
+                "fifth_quintile": 0
             }
-            removal_position_percentages = []  # Sammle prozentuale Positionen für Statistik
+            removal_position_percentages = []
             
             for r in self.monitoring_results:
                 camera = r.get('camera')
@@ -95,9 +93,7 @@ class TailPostureReporter(TailPostureVisualizer):
                         # Calculate coverage percentage
                         if ds:
                             try:
-                                # Wir haben start_date und end_date bereits oben definiert
                                 gt_duration = (gt_end_date - gt_start_date).days + 1
-                                actual_duration = (end_date - start_date).days + 1
                                 
                                 # Calculate overlap
                                 overlap_start = max(start_date, gt_start_date)
@@ -114,14 +110,12 @@ class TailPostureReporter(TailPostureVisualizer):
                 
                 # Extract culprit removal information
                 if pen_type == "tail biting":
-                    # Find the specific entry in the JSON data
                     for entry in json_data:
                         if entry.get('camera') == camera and entry.get('datespan') == ds:
                             culprit_data = entry.get('culpritremoval')
                             pen_id = f"{camera}_{ds}"
                             
                             if culprit_data:
-                                # Für die Analyse der relativen Position
                                 datespan_start = pd.to_datetime(ds.split('_')[0], format='%y%m%d')
                                 datespan_end = pd.to_datetime(ds.split('_')[1], format='%y%m%d')
                                 datespan_length = (datespan_end - datespan_start).days
@@ -137,13 +131,11 @@ class TailPostureReporter(TailPostureVisualizer):
                                                 removal_dates_per_pen[pen_id] = []
                                             removal_dates_per_pen[pen_id].append(removal_date)
                                             
-                                            # Berechne relative Position
-                                            if datespan_length > 0:  # Verhindere Division durch Null
+                                            if datespan_length > 0:
                                                 days_from_start = (removal_date - datespan_start).days
                                                 position_pct = (days_from_start / datespan_length) * 100
                                                 removal_position_percentages.append(position_pct)
                                                 
-                                                # Kategorisiere in Quintile
                                                 if position_pct <= 20:
                                                     relative_removal_positions["first_quintile"] += 1
                                                 elif position_pct <= 40:
@@ -164,13 +156,11 @@ class TailPostureReporter(TailPostureVisualizer):
                                         removal_dates.append(removal_date)
                                         removal_dates_per_pen[pen_id] = [removal_date]
                                         
-                                        # Berechne relative Position
-                                        if datespan_length > 0:  # Verhindere Division durch Null
+                                        if datespan_length > 0:
                                             days_from_start = (removal_date - datespan_start).days
                                             position_pct = (days_from_start / datespan_length) * 100
                                             removal_position_percentages.append(position_pct)
                                             
-                                            # Kategorisiere in Quintile
                                             if position_pct <= 20:
                                                 relative_removal_positions["first_quintile"] += 1
                                             elif position_pct <= 40:
@@ -185,10 +175,8 @@ class TailPostureReporter(TailPostureVisualizer):
                                         pass
                             break
             
-            # Speichere die relativen Positionsergebnisse
             summary['dataset']['relative_removal_positions'] = relative_removal_positions
 
-            # Berechne zusätzliche Statistiken über die relativen Positionen
             if removal_position_percentages:
                 summary['dataset']['removal_position_stats'] = {
                     'avg_position_pct': sum(removal_position_percentages) / len(removal_position_percentages),
@@ -262,7 +250,7 @@ class TailPostureReporter(TailPostureVisualizer):
         else: 
             summary['dataset']['status'] = "No monitoring results loaded."
 
-        # --- Data Quality Metrics --- (UPDATED to include GT datespan-based metrics)
+        # --- Data Quality Metrics ---
         if self.processed_results:
             json_data = load_json_data(self.path_manager.path_to_piglet_rearing_info)
             
@@ -285,11 +273,9 @@ class TailPostureReporter(TailPostureVisualizer):
                 datespan = p.get('date_span')
                 _, _, datespan_gt = get_pen_info(camera, datespan, json_data)
                 
-                # First, account for actual missing days within the datespan
                 missing_days_files = p['quality_metrics'].get('missing_days_detected', 0)
                 missing_days_within_datespan += missing_days_files
                 
-                # Add to our list for min/max/avg/median calculations
                 missing_days_per_datespan.append(missing_days_files)
                 
                 if datespan_gt and datespan_gt != "Unknown":
@@ -381,25 +367,25 @@ class TailPostureReporter(TailPostureVisualizer):
 
         # --- Descriptive Outbreak Analysis ---
         if hasattr(self, 'pre_outbreak_stats') and self.pre_outbreak_stats is not None and not self.pre_outbreak_stats.empty:
-            stats_df = self.pre_outbreak_stats # Alias for easier access
-            oa = summary['outbreak_analysis'] # Alias
+            stats_df = self.pre_outbreak_stats
+            oa = summary['outbreak_analysis']
             n_analyzed = len(stats_df)
             oa['num_outbreaks_analyzed'] = n_analyzed
             oa['num_pens_analyzed'] = len(stats_df['pen'].unique())
 
-            # Value stats (incorporate Panel A info)
+            # Value stats
             val_rem = stats_df['value_at_removal']
             oa['value_at_removal'] = {
-                'count': val_rem.count(), # Added count
+                'count': val_rem.count(),
                 'mean': val_rem.mean(), 'median': val_rem.median(), 'std': val_rem.std(),
                 'p25': val_rem.quantile(0.25), 'p10': val_rem.quantile(0.10)}
-            for days in [1, 3, 5, 7, 10]: # Check for multiple days
+            for days in [1, 3, 5, 7, 10]:
                 col = f'value_{days}d_before'
                 if col in stats_df.columns and stats_df[col].notna().any():
                     data = stats_df[col]
                     oa[col] = {'mean': data.mean(), 'median': data.median(), 'std': data.std()}
 
-            # Change stats (incorporate Panel C & E info)
+            # Change stats
             oa['absolute_change'] = {}
             oa['percentage_change'] = {}
             for days in [1, 3, 7]:
@@ -417,9 +403,9 @@ class TailPostureReporter(TailPostureVisualizer):
                          oa['percentage_change'][f'{days}d'] = {'mean': valid_pct.mean(), 'median': valid_pct.median(), 'std': valid_pct.std()}
 
 
-            # Window stats (incorporate Panel D info, NEW p-value calc)
+            # Window stats
             oa['window_stats'] = {}
-            alpha = self.config.get('significance_level', 0.05) # Get alpha for significance check
+            alpha = self.config.get('significance_level', 0.05)
             for days in [3, 7]:
                 key_base = f'{days}d_window'
                 oa['window_stats'][key_base] = {}
@@ -449,7 +435,7 @@ class TailPostureReporter(TailPostureVisualizer):
             summary['outbreak_analysis']['status'] = f"No outbreaks analyzed successfully (due to {total_excluded} exclusions for missing data, or other reasons)."
         else: summary['outbreak_analysis']['status'] = "No tail biting events found or analyzed."
 
-        # --- Control Comparison Analysis --- (Assumed OK, but uses self.compare_outbreak_vs_control_statistics())
+        # --- Control Comparison Analysis ---
         if hasattr(self, 'control_stats') and self.control_stats is not None and not self.control_stats.empty and \
            hasattr(self, 'pre_outbreak_stats') and self.pre_outbreak_stats is not None and not self.pre_outbreak_stats.empty:
             cc = summary['control_comparison']
@@ -467,12 +453,12 @@ class TailPostureReporter(TailPostureVisualizer):
 
                 # Extract key metrics for summary
                 significant_metrics = [metric for metric, data in self.comparison_results.items()
-                                    if data.get('is_significant', False)] # Use .get for safety
+                                    if data.get('is_significant', False)]
                 cc['significant_metrics'] = significant_metrics
 
-                # Count strong effect sizes (>0.8 is considered large)
+                # Count strong effect sizes
                 strong_effects = [metric for metric, data in self.comparison_results.items()
-                                if data.get('effect_size', 0) > 0.8] # Use .get and default
+                                if data.get('effect_size', 0) > 0.8]
                 cc['strong_effect_metrics'] = strong_effects
             else:
                  cc['status'] = "Comparison could not be performed or failed."
@@ -557,104 +543,7 @@ class TailPostureReporter(TailPostureVisualizer):
                     ca['hanging_contribution_3d'] = self.component_analysis['contribution_stats']['hanging_contribution_3d']
         else:
             summary['component_analysis']['status'] = "No component analysis available."
-            
-        # --- NEW: Monitoring Thresholds Analysis ---
-        if hasattr(self, 'threshold_results') and self.threshold_results is not None:
-            mt = summary['monitoring_thresholds']
 
-            # Add data counts
-            if 'data_counts' in self.threshold_results:
-                mt['data_counts'] = self.threshold_results['data_counts']
-
-            # Add best metric information
-            if 'overall_best_metric' in self.threshold_results:
-                mt['best_metric'] = self.threshold_results['overall_best_metric']
-                # Safely get display name
-                metrics_to_evaluate = self.threshold_results.get('metrics_to_evaluate', [])
-                best_metric_info = next((m for m in metrics_to_evaluate if m['name'] == mt['best_metric']), {})
-                mt['best_metric_display'] = best_metric_info.get('display_name', mt['best_metric'])
-
-
-                # Add recommendation details
-                best_metric = self.threshold_results['overall_best_metric']
-                if best_metric in self.threshold_results.get('recommendations', {}):
-                    recommendation = self.threshold_results['recommendations'][best_metric]
-                    warning_time_data = recommendation.get('warning_time_on_training', {}) # Use training warning time
-
-                    # Extract key metrics
-                    mt['best_threshold'] = recommendation.get('threshold_value')
-                    mt['best_percentile'] = recommendation.get('best_percentile')
-                    # Use performance_on_training for consistency
-                    mt['sensitivity'] = recommendation.get('performance_on_training', {}).get('sensitivity')
-                    mt['specificity'] = recommendation.get('performance_on_training', {}).get('specificity')
-                    mt['warning_days'] = warning_time_data.get('mean')
-                    mt['warning_days_median'] = warning_time_data.get('median')
-
-                    raw_times = warning_time_data.get('raw_times')
-                    if raw_times and isinstance(raw_times, list) and len(raw_times) > 0:
-                        valid_times = [t for t in raw_times if pd.notna(t)] # Ensure NaN resilience
-                        if valid_times:
-                            mt['warning_days_min'] = min(valid_times)
-                            mt['warning_days_max'] = max(valid_times)
-                        else:
-                             mt['warning_days_min'] = None
-                             mt['warning_days_max'] = None
-                    else:
-                        mt['warning_days_min'] = None
-                        mt['warning_days_max'] = None
-                    
-                    # Calculate threshold categories for reporting
-                    if mt.get('warning_days') is not None and pd.notna(mt['warning_days']): # Check for NaN too
-                        if mt['warning_days'] >= 5:
-                            mt['warning_category'] = "excellent"
-                        elif mt['warning_days'] >= 3:
-                            mt['warning_category'] = "good"
-                        else:
-                            mt['warning_category'] = "limited"
-                    else: mt['warning_category'] = 'N/A' # Handle None/NaN case
-
-                    if mt.get('sensitivity') is not None and pd.notna(mt['sensitivity']): # Check for NaN too
-                        if mt['sensitivity'] >= 0.9:
-                            mt['sensitivity_category'] = "excellent"
-                        elif mt['sensitivity'] >= 0.7:
-                            mt['sensitivity_category'] = "good"
-                        else:
-                            mt['sensitivity_category'] = "moderate"
-                    else: mt['sensitivity_category'] = 'N/A'
-            
-           # Add secondary metrics (This part seems okay, but relies on correct data extraction above)
-            metrics_evaluated = self.threshold_results.get('metrics', {}).get('evaluated', [])
-            if metrics_evaluated:
-                secondary_metrics = []
-                for metric in metrics_evaluated:
-                     # Ensure you compare against mt['best_metric'] which was assigned earlier
-                    best_metric_name = mt.get('best_metric')
-                    if best_metric_name and metric != best_metric_name and metric in self.threshold_results.get('recommendations', {}):
-                        recommendation = self.threshold_results['recommendations'][metric]
-                        performance_data = recommendation.get('performance_on_training', {}) # Use training performance
-                        warning_data = recommendation.get('warning_time_on_training', {}) # Use training warning
-
-                        # Only include viable secondary metrics
-                        sensitivity = performance_data.get('sensitivity', 0)
-                        warning_days = warning_data.get('mean', 0)
-
-                        if pd.notna(sensitivity) and sensitivity >= 0.6:  # Only include reasonably sensitive metrics
-                            metric_info = next((m for m in metrics_to_evaluate if m['name'] == metric), {})
-                            metric_display = metric_info.get('display_name', metric)
-
-                            secondary_metrics.append({
-                                'name': metric,
-                                'display_name': metric_display,
-                                'threshold': recommendation.get('threshold_value'),
-                                'sensitivity': sensitivity,
-                                'warning_days': warning_days
-                            })
-                
-                # Sort by sensitivity (highest first)
-                secondary_metrics.sort(key=lambda x: x.get('sensitivity', 0), reverse=True)
-                mt['secondary_metrics'] = secondary_metrics[:3]  # Top 3 secondary metrics
-        else:
-            summary['monitoring_thresholds']['status'] = "No monitoring threshold analysis available."
 
         # --- Generate Text Report ---
         report_text = ["=" * 80, "DESCRIPTIVE TAIL POSTURE ANALYSIS REPORT", "=" * 80, ""]
@@ -666,7 +555,7 @@ class TailPostureReporter(TailPostureVisualizer):
         report_text.append(f"Number of cameras found: {ds.get('num_cameras', 'N/A')}")
         report_text.append(f"Number of datespans loaded: {ds.get('num_datespans_loaded', 'N/A')}")
 
-        # Enhanced date range information
+        # Date range information
         if 'date_range' in ds:
             actual_range = ds['date_range']
             report_text.append(f"Actual Date range: {actual_range['min']} to {actual_range['max']} ({actual_range.get('span_days', 'N/A')} days)")
@@ -795,9 +684,7 @@ class TailPostureReporter(TailPostureVisualizer):
         report_text.append("DETAILED EXCLUSION REPORT")
         report_text.append("-" * 80)
 
-        # Check if we have the enhanced exclusion tracking
         if hasattr(self, 'exclusion_by_analysis'):
-            # Create sets to track what we've already reported
             reported_cameras = set()
             
             # First report tail biting analysis exclusions
@@ -869,11 +756,10 @@ class TailPostureReporter(TailPostureVisualizer):
                         camera_label = camera.replace("Kamera", "Pen ")
                         report_text.append(f"  - {camera_label} / {date_span} ({pen_type}): {reason}")
 
-        # Fall back to the original method if enhanced tracking isn't available
+        # Fall back to the original method if tracking isn't available
         elif hasattr(self, 'excluded_elements'):
             report_text.append("\nNote: Exclusions are not separated by analysis type. To see which analysis excluded each element, re-run with updated tracking.")
             
-            # Create sets to track what we've already reported
             reported_cameras = set()
             
             # Consecutive missing exclusions
@@ -909,7 +795,7 @@ class TailPostureReporter(TailPostureVisualizer):
         else:
             report_text.append("\nNo detailed exclusion information available.")
                                 
-        report_text.append("")  # Add a blank line after this section
+        report_text.append("")
 
         # Outbreak Analysis
         report_text.append("DESCRIPTIVE PRE-OUTBREAK ANALYSIS")
@@ -926,7 +812,7 @@ class TailPostureReporter(TailPostureVisualizer):
                 report_text.append(f"  - At Removal (N={stats.get('count', 'N/A')}): " +
                                    f"Mean={format_value(stats.get('mean'))}, Median={format_value(stats.get('median'))}, " +
                                    f"Std={format_value(stats.get('std'))}, P25={format_value(stats.get('p25'))}, P10={format_value(stats.get('p10'))}")
-            for days in [1, 3, 7]: # Report key days before
+            for days in [1, 3, 7]:
                 key = f'value_{days}d_before'
                 if key in oa:
                     stats = oa[key]
@@ -960,7 +846,6 @@ class TailPostureReporter(TailPostureVisualizer):
                                                f"Median={format_value(slope_stats.get('median'))}, Std={format_value(slope_stats.get('std'))}")
                       else:
                           report_text.append(f"  - {days}-Day Window: Slope data not calculated.")
-                 # Also report average if calculated
                  report_text.append("  Window Average (Value):")
                  for window_key, stats_dict in oa['window_stats'].items():
                       days = window_key.replace('d_window','')
@@ -1029,12 +914,6 @@ class TailPostureReporter(TailPostureVisualizer):
                 for pattern, count in iv['pattern_counts'].items():
                     percentage = iv['pattern_percentages'][pattern]
                     report_text.append(f"  - {pattern}: {count} outbreaks ({percentage:.1f}%)")
-                    
-            # Report pen consistency
-            if 'pen_consistency' in iv:
-                pc = iv['pen_consistency']
-                report_text.append(f"\nPen Consistency: {pc['pens_consistent']}/{pc['pens_with_multiple']} pens " +
-                                f"({pc['consistency_percentage']:.1f}%) show consistent pattern categories across multiple outbreaks.")
                 
             # Report metrics by pattern
             report_text.append("\nKey Metrics by Pattern Category:")
@@ -1105,258 +984,6 @@ class TailPostureReporter(TailPostureVisualizer):
                 
             report_text.append("\n*See 'posture_component_analysis.png' for detailed visualizations.*")
         report_text.append("")
-        
-        report_text.append("MONITORING THRESHOLD ANALYSIS")
-        report_text.append("-" * 80)
-        mt = summary.get('monitoring_thresholds', {})
-
-        if 'status' in mt:
-            report_text.append(mt['status'])
-        else:
-            # Report data counts (seems okay)
-            if 'data_counts' in mt:
-                counts = mt['data_counts']
-                report_text.append(f"Analysis based on {counts.get('outbreak_trajectories', 'N/A')} outbreak trajectories from {counts.get('outbreak_pens', 'N/A')} pens.")
-                if counts.get('control_trajectories', 0) > 0:
-                    report_text.append(f"Control data: {counts.get('control_trajectories', 'N/A')} control trajectories from {counts.get('control_pens', 'N/A')} pens.")
-                    report_text.append("")
-
-            # Report best metric and recommended threshold
-            if 'best_metric' in mt:
-                best_metric_display = mt.get('best_metric_display', mt.get('best_metric', 'N/A')) # Use display name
-                best_threshold = mt.get('best_threshold', 'N/A')
-                best_percentile = mt.get('best_percentile', 'N/A')
-                sensitivity = mt.get('sensitivity', None) # Get potentially None/NaN value
-                specificity = mt.get('specificity', None) # Get potentially None/NaN value
-                warning_days = mt.get('warning_days', None)
-                warning_days_median = mt.get('warning_days_median', None)
-                warning_days_min = mt.get('warning_days_min', None) # Will be None if calculation failed
-                warning_days_max = mt.get('warning_days_max', None) # Will be None if calculation failed
-
-                sensitivity_str = format_value(sensitivity, ".1%")
-                specificity_str = format_value(specificity, ".1%")
-                warn_str = format_value(warning_days, ".1f")
-                med_str = format_value(warning_days_median, ".1f")
-                min_str = format_value(warning_days_min, ".1f")
-                max_str = format_value(warning_days_max, ".1f")
-                thresh_str = format_value(best_threshold, ".3f") # Format threshold too
-
-                # Report primary monitoring recommendation
-                report_text.append("PRIMARY MONITORING RECOMMENDATION:")
-                report_text.append(f"  - Metric: {best_metric_display}")
-                report_text.append(f"  - Threshold: {thresh_str} ({best_percentile}th percentile at removal)")
-                report_text.append(f"  - Performance on Training: Sensitivity = {sensitivity_str}" +
-                                (f", Specificity = {specificity_str}" if specificity_str != 'N/A' else ""))
-                report_text.append(f"  - Advance Warning on Training: {warn_str} days (median: {med_str}, range: {min_str}-{max_str})")
-
-                # Add category descriptions (use the calculated categories)
-                sens_cat = mt.get('sensitivity_category', 'N/A')
-                warn_cat = mt.get('warning_category', 'N/A')
-                if warn_cat != 'N/A' and sens_cat != 'N/A':
-                     report_text.append(f"  - Assessment: {warn_cat.capitalize()} advance warning with {sens_cat} sensitivity.")
-                
-                # Report implementation considerations with more detail
-                report_text.append("\nIMPLEMENTATION GUIDELINES:")
-                report_text.append("  1. Use a 3-day moving average to smooth daily variability")
-                report_text.append(f"  2. Trigger an investigation when {best_metric_display} crosses the threshold of {thresh_str}") # Use formatted threshold
-                report_text.append(f"  3. Expected advance warning of {warn_str} days (range: {min_str}-{max_str})") # Use formatted values
-                report_text.append(f"  4. Expected detection rate (based on training data): {sensitivity_str} of outbreaks")
-                if specificity_str != 'N/A' and specificity is not None and pd.notna(specificity) and specificity < 1:
-                    fpr = 1.0 - specificity
-                    alerts_per_fp = int(1 / fpr) if fpr > 0 else '∞'
-                    report_text.append(f"  5. Expected false alert rate (based on training data): {fpr:.1%} (approx. 1 alert per {alerts_per_fp} non-outbreak periods)")
-                elif specificity_str != 'N/A':
-                     report_text.append("  5. Expected false alert rate (based on training data): Very low / 0%")
-
-
-                # Add expected monitoring outcomes
-                expected_lead_time = warning_days if warning_days is not None and pd.notna(warning_days) else None
-                if expected_lead_time is not None and expected_lead_time > 0:
-                    report_text.append("\nEXPECTED MONITORING OUTCOMES:")
-                    report_text.append(f"  - Early intervention potential: {expected_lead_time:.1f} days before clinical signs")
-
-                    # Add practical impact assessment
-                    if expected_lead_time >= 5:
-                        report_text.append("  - Intervention effectiveness: High (sufficient time for multiple intervention strategies)")
-                    elif expected_lead_time >= 3:
-                        report_text.append("  - Intervention effectiveness: Moderate (adequate time for targeted interventions)")
-                    else:
-                        report_text.append("  - Intervention effectiveness: Limited (rapid response required)")
-
-            # Report secondary metrics with more actionable details
-            if 'secondary_metrics' in mt:
-                secondary_metrics = mt['secondary_metrics']
-                if secondary_metrics:
-                    report_text.append("\nSECONDARY MONITORING METRICS:")
-                    for i, metric in enumerate(secondary_metrics):
-                        name = metric.get('display_name', 'Unknown')
-                        threshold = metric.get('threshold', None)
-                        sensitivity = metric.get('sensitivity', None)
-                        warning_days = metric.get('warning_days', None)
-                        thresh_str = format_value(threshold, ".3f")
-                        sens_str = format_value(sensitivity, ".1%")
-                        warn_str = format_value(warning_days, ".1f")
-
-                        # Determine purpose (ensure comparison value is valid)
-                        primary_warn_days = summary.get('monitoring_thresholds', {}).get('warning_days')
-                        primary_sens = summary.get('monitoring_thresholds', {}).get('sensitivity')
-                        purpose = ""
-                        if i == 0:
-                            purpose = "(primary confirmation)"
-                        elif warn_str != 'N/A' and primary_warn_days is not None and pd.notna(primary_warn_days) and warning_days > primary_warn_days + 1:
-                            purpose = "(potential earlier detection)"
-                        elif sens_str != 'N/A' and primary_sens is not None and pd.notna(primary_sens) and sensitivity > primary_sens + 0.05:
-                            purpose = "(potential higher detection rate)"
-                        else:
-                            purpose = "(supplementary indicator)"
-
-                        report_text.append(f"  {i+1}. {name}: threshold = {thresh_str}, sensitivity = {sens_str}, " +
-                                        f"warning = {warn_str} days {purpose}")
-
-
-                    # Add multi-metric strategy recommendation with practical steps
-                    # Ensure primary threshold is formatted correctly here too
-                    primary_thresh_str = format_value(summary.get('monitoring_thresholds', {}).get('best_threshold'), ".3f")
-                    primary_metric_display = summary.get('monitoring_thresholds', {}).get('best_metric_display', 'N/A')
-                    if primary_thresh_str != 'N/A' and primary_metric_display != 'N/A':
-                         report_text.append("\nRECOMMENDED MULTI-METRIC MONITORING STRATEGY:")
-                         report_text.append(f"  1. Primary alert: {primary_metric_display} crosses threshold of {primary_thresh_str}")
-
-                         if secondary_metrics and len(secondary_metrics) >= 1:
-                             sec_metric = secondary_metrics[0]
-                             sec_thresh_str = format_value(sec_metric.get('threshold'), ".3f")
-                             if sec_thresh_str != 'N/A':
-                                 report_text.append(f"  2. Secondary confirmation: {sec_metric.get('display_name')} crosses threshold of {sec_thresh_str}")
-                                 report_text.append("  3. Action protocol:")
-                                 report_text.append("     a. When primary metric alone crosses threshold: Increase monitoring frequency & observation.")
-                                 report_text.append("     b. When both primary and secondary metrics cross thresholds: Initiate immediate intervention protocol.")
-
-                             # Add escalation plan if we have more than one secondary metric
-                             if len(secondary_metrics) >= 2:
-                                 report_text.append("  4. Escalation criteria:")
-                                 report_text.append(f"     a. If additional metrics cross threshold: Highest priority intervention.")
-                                 tert_metric = secondary_metrics[1]
-                                 tert_thresh_str = format_value(tert_metric.get('threshold'), ".3f")
-                                 if tert_thresh_str != 'N/A':
-                                      report_text.append(f"     b. Watch for {tert_metric.get('display_name')} (threshold: {tert_thresh_str}) as supplementary indicator.")
-
-            # Add comprehensive validation results (ensure formatting is robust here too)
-            if hasattr(self, 'threshold_results') and 'validation' in self.threshold_results:
-                validation = self.threshold_results['validation']
-                method = validation.get('method', 'Unknown')
-                best_metric_name = mt.get('best_metric', None) # Get the name
-
-                report_text.append(f"\nVALIDATION METHODOLOGY: {method.upper()} Cross-Validation")
-
-                # Report cross-validation summary for best metric with more detailed statistics
-                if best_metric_name and 'cross_validation' in validation and best_metric_name in validation['cross_validation']:
-                    cv_results = validation['cross_validation'][best_metric_name]
-                    cv_summary = cv_results.get('summary', {})
-                    if cv_summary:
-                        mean_thresh = cv_summary.get('mean_threshold_selected_in_folds') # Get correct key
-                        std_thresh = cv_summary.get('std_threshold_selected_in_folds')   # Get correct key
-                        mean_sens = cv_summary.get('mean_test_sensitivity')
-                        std_sens = np.std(cv_results.get('sensitivities', [])) if cv_results.get('sensitivities') else 0
-                        mean_spec = cv_summary.get('mean_test_specificity')
-                        std_spec = np.std(cv_results.get('specificities', [])) if cv_results.get('specificities') else 0
-                        mean_warn = cv_summary.get('mean_test_warning_time')
-                        std_warn = np.std(cv_results.get('warning_times', [])) if cv_results.get('warning_times') else 0
-
-                        report_text.append(f"\nCross-Validation Results for {best_metric_display}:") # Use display name
-                        report_text.append(f"  • Mean Threshold Selected in Folds: {format_value(mean_thresh, '.3f')} ± {format_value(std_thresh, '.3f')}")
-                        report_text.append(f"  • Mean Test Sensitivity: {format_value(mean_sens, '.2f')} ± {format_value(std_sens, '.2f')}")
-                        report_text.append(f"  • Mean Test Specificity: {format_value(mean_spec, '.2f')} ± {format_value(std_spec, '.2f')}")
-                        report_text.append(f"  • Mean Test Warning Time: {format_value(mean_warn, '.1f')} ± {format_value(std_warn, '.1f')} days")
-                        report_text.append(f"  • Number of Folds: {cv_summary.get('n_folds', 'N/A')}")
-
-
-                # Report holdout results with more interpretation
-                if best_metric_name and 'holdout_evaluation' in validation and best_metric_name in validation['holdout_evaluation']:
-                    holdout = validation['holdout_evaluation'][best_metric_name]
-                    report_text.append(f"\nHoldout Test Set Results for {best_metric_display}:") # Use display name
-                    holdout_sens = holdout.get('sensitivity', None)
-                    holdout_spec = holdout.get('specificity', None)
-                    holdout_warning = holdout.get('mean_warning_time', None)
-
-                    report_text.append(f"  • Sensitivity: {format_value(holdout_sens, '.2f')}")
-                    report_text.append(f"  • Specificity: {format_value(holdout_spec, '.2f')}")
-                    report_text.append(f"  • Warning Time: {format_value(holdout_warning, '.1f')} days")
-                    report_text.append(f"  • Holdout Sample Size: {holdout.get('n_outbreak_trajectories', 'N/A')} outbreak trajectories, {holdout.get('n_control_trajectories', 'N/A')} control trajectories")
-
-                    # Compare holdout to cross-validation results if available
-                    if best_metric_name and 'cross_validation' in validation and best_metric_name in validation['cross_validation']:
-                         cv_summary = validation['cross_validation'][best_metric_name].get('summary', {})
-                         if cv_summary:
-                             cv_sens = cv_summary.get('mean_test_sensitivity', None) # Use test sensitivity
-                             cv_warning = cv_summary.get('mean_test_warning_time', None) # Use test warning time
-
-                             sens_diff = (holdout_sens - cv_sens) if holdout_sens is not None and cv_sens is not None and pd.notna(holdout_sens) and pd.notna(cv_sens) else None
-                             warning_diff = (holdout_warning - cv_warning) if holdout_warning is not None and cv_warning is not None and pd.notna(holdout_warning) and pd.notna(cv_warning) else None
-
-                             if sens_diff is not None:
-                                 if abs(sens_diff) < 0.05:
-                                     report_text.append("  • Holdout sensitivity consistent with cross-validation average (+/- 5%)")
-                                 elif sens_diff > 0:
-                                     report_text.append(f"  • Holdout sensitivity higher than cross-validation average by {sens_diff:.1%}")
-                                 else:
-                                     report_text.append(f"  • Holdout sensitivity lower than cross-validation average by {abs(sens_diff):.1%}")
-
-                             if warning_diff is not None:
-                                 if abs(warning_diff) < 0.5:
-                                     report_text.append("  • Holdout warning time consistent with cross-validation average (+/- 0.5 days)")
-                                 elif warning_diff > 0:
-                                     report_text.append(f"  • Holdout warning time longer than cross-validation average by {warning_diff:.1f} days")
-                                 else:
-                                     report_text.append(f"  • Holdout warning time shorter than cross-validation average by {abs(warning_diff):.1f} days")
-
-
-            # Add prospective validation protocol with more specifics
-            if hasattr(self, 'threshold_results') and 'prospective_protocol' in self.threshold_results:
-                protocol = self.threshold_results['prospective_protocol']
-                report_text.append("\nPROSPECTIVE VALIDATION PROTOCOL:")
-                # Add overview and steps directly from the protocol structure if desired
-                report_text.append(f"  Overview: {protocol.get('overview', 'N/A')}")
-                for step_info in protocol.get('steps', []):
-                    report_text.append(f"  Step {step_info.get('step', '?')}: {step_info.get('title', 'N/A')}")
-                    report_text.append(f"     {step_info.get('description', 'N/A')}")
-
-                # Add performance targets
-                if 'performance_targets' in protocol:
-                    targets = protocol['performance_targets']
-                    report_text.append(f"\nProspective Validation Performance Targets:")
-                    report_text.append(f"  • Minimum Sensitivity: {format_value(targets.get('minimum_sensitivity'), '.2f')}")
-                    report_text.append(f"  • Minimum Specificity: {format_value(targets.get('minimum_specificity'), '.2f')}")
-                    report_text.append(f"  • Target Warning Time: {format_value(targets.get('target_warning_days'), '.1f')} days")
-                    report_text.append(f"  • Max FPR per pen/month: {format_value(targets.get('maximum_false_positive_rate_per_pen_per_month'), '.1f')}")
-
-
-            report_text.append("\n*See 'monitoring_threshold_analysis.png' for detailed threshold analysis visualization.*")
-        report_text.append("")
-
-
-        # --- General Observations & Recommendations --- (Review formatting here too)
-        report_text.append("GENERAL OBSERVATIONS & RECOMMENDATIONS")
-        report_text.append("-" * 80)
-        # ... (Most of this section should be okay, but double-check any direct formatting) ...
-        # Example: ensure values pulled from `mt` or `ca` are formatted robustly if used directly
-        # Example check:
-        if 'best_metric' in mt:
-            best_metric_display = mt.get('best_metric_display', 'N/A')
-            warning_days_val = mt.get('warning_days', None)
-            sensitivity_val = mt.get('sensitivity', None)
-            warn_str = format_value(warning_days_val, ".1f")
-            sens_str = format_value(sensitivity_val, ".1%")
-            if warn_str != 'N/A' and sens_str != 'N/A':
-                report_text.append(f"- Automated monitoring using {best_metric_display} can provide {warn_str} days of advance warning with {sens_str} sensitivity.")
-
-        # Practical recommendations check:
-        if 'best_metric' in mt:
-             best_metric_display = mt.get('best_metric_display', 'N/A')
-             best_threshold_val = mt.get('best_threshold', None)
-             thresh_str = format_value(best_threshold_val, ".3f") # Use helper
-             if thresh_str != 'N/A':
-                report_text.append(f"1. Implement automated monitoring using {best_metric_display} with a threshold of {thresh_str}.")
-
 
         dq = summary.get('data_quality', {})
 
@@ -1399,7 +1026,6 @@ class TailPostureReporter(TailPostureVisualizer):
                 self.logger.error(f"Preprocessing failed for {result.get('camera','?')}/{result.get('date_span','?')}. Skipping.")
         self.logger.info(f"Preprocessing finished in {time.time() - start_time_preprocess:.2f} seconds.")
         self.logger.info(f"Total processed results after preprocessing: {len(self.processed_results)}")
-
 
         # Step 2: Analyze pre-outbreak statistics (descriptive)
         try:
@@ -1452,56 +1078,6 @@ class TailPostureReporter(TailPostureVisualizer):
         except Exception as e:
              self.logger.error(f"Error during analyze_posture_components: {e}", exc_info=True)
              self.component_analysis = None
-
-        # # Step 2e: Analyze monitoring thresholds and practical implementation
-        # threshold_results = None
-        # try:
-        #      threshold_results = self.analyze_monitoring_thresholds()
-        #      if threshold_results and 'metrics' in threshold_results:
-        #          self.threshold_results = threshold_results
-        #          self.logger.info("Completed monitoring threshold analysis.")
-        #      else:
-        #          self.logger.warning("Monitoring threshold analysis failed or had insufficient data.")
-        #          self.threshold_results = None
-        # except Exception as e:
-        #      self.logger.error(f"Error during analyze_monitoring_thresholds: {e}", exc_info=True)
-        #      self.threshold_results = None
-        
-        # Step 2e: Analyze monitoring thresholds and practical implementation
-        threshold_results = None
-        try:
-            # Call the new comprehensive monitoring threshold analysis function
-            threshold_analysis = self.analyze_and_identify_monitoring_thresholds()
-            
-            if threshold_analysis:
-                # Set appropriate attributes for later use/visualization
-                if hasattr(self, 'monitoring_thresholds'):
-                    self.logger.info("Successfully identified potential monitoring thresholds.")
-                
-                if hasattr(self, 'validation_results'):
-                    self.logger.info("Successfully validated monitoring thresholds.")
-                
-                if hasattr(self, 'optimal_thresholds'):
-                    self.logger.info("Successfully identified optimal monitoring thresholds.")
-                    # Store for visualization and reporting
-                    self.threshold_results = self.optimal_thresholds
-                
-                # Log the results of the threshold analysis pipeline
-                for step, status in threshold_analysis.items():
-                    if status:
-                        self.logger.info(f"Threshold analysis step '{step}' completed successfully.")
-                    else:
-                        self.logger.warning(f"Threshold analysis step '{step}' did not complete successfully.")
-                
-                self.logger.info("Completed monitoring threshold analysis pipeline.")
-            else:
-                self.logger.warning("Monitoring threshold analysis failed or had insufficient data.")
-                self.threshold_results = None
-        except Exception as e:
-            self.logger.error(f"Error during analyze_and_identify_monitoring_thresholds: {e}", exc_info=True)
-            self.threshold_results = None
-
-        self.generate_threshold_summary_report(output_file='threshold_validation_report.md')
 
         # Step 3: Create visualizations (descriptive)
 
@@ -1560,19 +1136,7 @@ class TailPostureReporter(TailPostureVisualizer):
             except Exception as e:
                  self.logger.error(f"Failed to create posture component visualization: {e}", exc_info=True)
                  
-        # # Step 3e: Create monitoring thresholds visualization and tables
-        # if hasattr(self, 'threshold_results') and self.threshold_results is not None:
-        #     threshold_vis_path = os.path.join(self.config['output_dir'], self.config.get('viz_thresholds_filename', 'monitoring_threshold_analysis.png'))
-        #     try:
-        #          # Pass the threshold_results dict directly
-        #          self.visualize_monitoring_thresholds(self.threshold_results, save_path=threshold_vis_path)
-        #          self.logger.info(f"Created monitoring threshold visualization: {threshold_vis_path}")
-        #     except Exception as e:
-        #          self.logger.error(f"Failed to create monitoring threshold visualization: {e}", exc_info=True)
-        # else:
-        #     self.logger.warning("Skipping monitoring threshold visualization and table generation due to insufficient threshold analysis.")
-
-        # Step 4: Generate summary report including threshold recommendations
+        # Step 4: Generate summary
         summary = None
         try:
              summary = self.generate_summary_report()

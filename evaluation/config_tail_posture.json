@@ -14,6 +14,7 @@
     "min_control_dates_threshold": 8,
     "control_date_margin": 5,
     "min_control_analysis_dates": 2,
+    "min_sample_values_comparison": 10,
     "control_samples_per_pen": 5,
     "comparison_metrics": [
         "value_at_removal",
@@ -52,5 +53,7 @@
     "viz_comparison_filename": "outbreak_vs_control_comparison.png",
     "viz_variation_filename": "individual_variation_analysis.png",
     "viz_components_filename": "posture_component_analysis.png",
-    "viz_completeness_filename": "data_completeness_timeline.png"
+    "viz_completeness_filename": "data_completeness_timeline.png",
+    "save_preprocessed_data": false,
+    "interpolate_resampled_data": false
 }

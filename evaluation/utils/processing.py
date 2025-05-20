@@ -291,3 +291,65 @@ class DataProcessor(TailPostureAnalysisBase):
                 except (np.linalg.LinAlgError, ValueError) as e:
                     self.logger.warning(f"Error calculating slope at index {i}: {e}")
         return pd.Series(slope_values, index=series.index)
+    
+    def interpolate_resampled_data(self, processed_results):
+        """
+        Interpolate NaN values in resampled_data dataframes for all processed results.
+        
+        Args:
+            processed_results: List of processed data dictionaries
+            
+        Returns:
+            List of processed data with interpolated resampled_data
+        """
+        if not processed_results:
+            self.logger.warning("No processed results available for interpolation.")
+            return processed_results
+        
+        interpolated_count = 0
+        
+        for result in processed_results:
+            resampled_data = result.get('resampled_data')
+            
+            if resampled_data is None or resampled_data.empty:
+                continue
+                
+            # Check if there are any NaN values to interpolate
+            nan_count = resampled_data['posture_diff'].isna().sum() if 'posture_diff' in resampled_data.columns else 0
+            if nan_count == 0:
+                continue
+                
+            # Get interpolation method from config
+            interp_method = self.config.get('interpolation_method', 'linear')
+            interp_order = self.config.get('interpolation_order', 3)
+            
+            try:
+                camera = result.get('camera', 'unknown')
+                date_span = result.get('date_span', 'unknown')
+                self.logger.debug(f"Interpolating {nan_count} NaN values in resampled_data for {camera} - {date_span} using {interp_method}")
+                
+                # Create a copy to avoid modifying the original
+                interpolated = resampled_data.copy()
+                
+                try:
+                    # Interpolate all numeric columns
+                    numeric_cols = interpolated.select_dtypes(include=[np.number]).columns
+                    interpolated[numeric_cols] = interpolated[numeric_cols].interpolate(method=interp_method, order=interp_order)
+                except ValueError as e:
+                    self.logger.warning(f"Interpolation method '{interp_method}' failed for {camera} - {date_span}: {e}. Falling back to linear.")
+                    try:
+                        numeric_cols = interpolated.select_dtypes(include=[np.number]).columns
+                        interpolated[numeric_cols] = interpolated[numeric_cols].interpolate(method='linear')
+                    except Exception as e_lin:
+                        self.logger.error(f"Linear interpolation fallback also failed for {camera} - {date_span}: {e_lin}.")
+                        continue
+                
+                # Update the result with the interpolated data
+                result['resampled_data'] = interpolated
+                interpolated_count += 1
+                
+            except Exception as e:
+                self.logger.error(f"Error during interpolation for {camera} - {date_span}: {e}", exc_info=True)
+        
+        self.logger.info(f"Interpolated NaN values in resampled_data for {interpolated_count}/{len(processed_results)} results.")
+        return processed_results

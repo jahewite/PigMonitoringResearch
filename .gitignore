@@ -4,9 +4,6 @@
 ### VS Code ###
 .vscode/
 
-### Project Directories ###
-assets/temp/
-
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
@@ -251,7 +248,10 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,macos,windows,jupyternotebooks
 
-# project specific stuff:
+# project specific:
+
+# project directories
+assets/temp/
 
 # environment
 /test_env
@@ -278,6 +278,9 @@ pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera3
 pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera4
 pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera5
 pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera6
+
+# visualizations
+evaluation/results_early_warning_evaluation/visualizations
 
 # notes
 notes.txt

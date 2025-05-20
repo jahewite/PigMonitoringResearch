@@ -4,23 +4,20 @@ from scipy import stats
 import os
 from datetime import timedelta
 
-from evaluation.tail_posture_analysis.processing import DataProcessor
+from evaluation.utils.processing import DataProcessor
+from evaluation.utils.data_filter import DataFilter
+from evaluation.utils.utils import save_filtered_dataframes
 from pipeline.utils.general import load_json_data
 from pipeline.utils.data_analysis_utils import get_pen_info
-from evaluation.tail_posture_analysis.threshold_monitoring import ThresholdMonitoringMixin
 
 
-class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
+class PigBehaviorAnalyzer(DataProcessor):
     """Methods for analyzing pig behavior data (lying, not lying, and activity)."""
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Initialize the tracking structures for exclusions
-        self.excluded_elements = {
-            'consecutive_missing': [],
-            'missing_percentage': [],
-            'other_reasons': []
-        }
+        # Initialize the data filter
+        self.data_filter = DataFilter(self.config, self.logger)
         
         # Define the metrics to be analyzed
         self.behavior_metrics = ['num_pigs_lying', 'num_pigs_notLying', 'activity']
@@ -32,132 +29,99 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
         
         # Initialize processed_results
         self.processed_results = []
+
+    def preprocess_monitoring_results(self):
+        """Preprocess the monitoring results data for analysis.
         
-    def _log_exclusion(self, exclusion_type, camera, date_span, pen_type, value, threshold, message, analysis_type="unknown"):
-        """Log an exclusion with enhanced tracking of which analysis excluded it."""
-        if not hasattr(self, 'excluded_elements'):
-            self.excluded_elements = {
-                'consecutive_missing': [],
-                'missing_percentage': [],
-                'other_reasons': []
-            }
-            
-        if not hasattr(self, 'exclusion_by_analysis'):
-            self.exclusion_by_analysis = {
-                'behavior_analysis': {
-                    'consecutive_missing': [],
-                    'missing_percentage': [],
-                    'other_reasons': []
-                },
-                'control_analysis': {
-                    'consecutive_missing': [],
-                    'missing_percentage': [],
-                    'other_reasons': []
-                }
-            }
+        Returns:
+            list: The processed results ready for further analysis.
+        """
+        self.processed_results = []
+        self.excluded_events_count = 0
+        self.logger.info("Starting preprocessing...")
         
-        # Continue with your existing logging
-        self.logger.info(message)
+        if not hasattr(self, 'monitoring_results') or not self.monitoring_results:
+            self.logger.error("No monitoring results available. Please load data first.")
+            return None
         
-        # Track in the original structure
-        if exclusion_type in self.excluded_elements:
-            if exclusion_type in ['consecutive_missing', 'missing_percentage']:
-                self.excluded_elements[exclusion_type].append((camera, date_span, pen_type, value, threshold))
+        for i, result in enumerate(self.monitoring_results):
+            self.logger.info(f"Preprocessing result {i+1}/{len(self.monitoring_results)}: {result.get('camera','?')}/{result.get('date_span','?')}")
+            processed_data = self.preprocess_data(result)
+            if processed_data:
+                self.processed_results.append(processed_data)
             else:
-                self.excluded_elements[exclusion_type].append((camera, date_span, pen_type, value))
+                self.logger.error(f"Preprocessing failed for {result.get('camera','?')}/{result.get('date_span','?')}. Skipping.")
         
-        # Also track in the new analysis-specific structure
-        if analysis_type in self.exclusion_by_analysis:
-            if exclusion_type in self.exclusion_by_analysis[analysis_type]:
-                if exclusion_type in ['consecutive_missing', 'missing_percentage']:
-                    self.exclusion_by_analysis[analysis_type][exclusion_type].append(
-                        (camera, date_span, pen_type, value, threshold)
-                    )
-                else:
-                    self.exclusion_by_analysis[analysis_type][exclusion_type].append(
-                        (camera, date_span, pen_type, value)
-                    )
+        self.logger.info(f"Total processed results after preprocessing: {len(self.processed_results)}")
+        return self.processed_results
         
-        return 1
-    
     def analyze_pre_outbreak_statistics(self):
         """Analyze pre-outbreak statistics for behavior metrics using earliest removal date per event."""
         self.logger.info("Analyzing pre-outbreak behavior statistics (using earliest removal date per event)...")
         json_data = load_json_data(self.path_manager.path_to_piglet_rearing_info)
         results = {metric: [] for metric in self.behavior_metrics}
-        self.excluded_events_count = 0
-        self.excluded_events_missing_pct_count = 0
         
         if not self.processed_results:
             self.logger.error("No processed data available. Run preprocessing steps first.")
             for metric in self.behavior_metrics:
                 self.pre_outbreak_stats[metric] = pd.DataFrame()
             return self.pre_outbreak_stats
+        
+        # First, filter by quality metrics
+        quality_filtered_results, excluded_count, excluded_pct_count = self.data_filter.filter_by_quality_metrics(
+            self.processed_results, get_pen_info, json_data, analysis_type="behavior_analysis"
+        )
+        
+        # Then filter for valid tail biting events
+        filtered_events, excluded_event_count = self.data_filter.filter_tail_biting_events(
+            quality_filtered_results, get_pen_info, json_data
+        )
+        
+        if self.config.get('interpolate_resampled_data', False):
+            # interpolate filtered, resampled data to avoid NaN values
+            filtered_events = DataProcessor().interpolate_resampled_data(filtered_events)
             
-        max_missing_threshold = self.config.get('max_allowed_consecutive_missing_days', 3)
-        max_missing_pct_threshold = self.config.get('max_allowed_missing_days_pct', 50.0)
+        if self.config.get('save_preprocessed_data', False):
+            # Save filtered DataFrames before processing
+            if filtered_events:
+                save_filtered_dataframes(
+                    filtered_results=filtered_events,
+                    config=self.config,
+                    logger=self.logger,
+                    path_manager=self.path_manager
+                )
+                
+        # Store exclusion counts for reporting
+        self.excluded_events_count = excluded_count
+        self.excluded_events_missing_pct_count = excluded_pct_count
 
-        for processed_data in self.processed_results:
+        for processed_data in filtered_events:
             camera = processed_data['camera']
             date_span = processed_data['date_span']
-            quality_metrics = processed_data.get('quality_metrics', {})
-            consecutive_missing = quality_metrics.get('max_consecutive_missing_resampled', 0)
-            
-            # Get pen type for tracking
-            pen_type, _, _ = get_pen_info(camera, date_span, json_data)
-            
-            # Check for consecutive missing days threshold
-            if consecutive_missing > max_missing_threshold:
-                message = (
-                    f"Excluding {camera}/{date_span} from behavior analysis due to {consecutive_missing} consecutive missing periods "
-                    f"in resampled data (threshold: {max_missing_threshold}). Raw missing days: {quality_metrics.get('missing_days_detected', 'unknown')}"
-                )
-                self.excluded_events_count += self._log_exclusion(
-                    'consecutive_missing', camera, date_span, pen_type, consecutive_missing, 
-                    max_missing_threshold, message, analysis_type="behavior_analysis"
-                )
-                continue
-                
-            # Check for percentage of missing days
-            missing_days = quality_metrics.get('missing_days_detected', 0)
-            total_days = quality_metrics.get('total_expected_days', 0)
-            missing_pct = (missing_days / total_days * 100) if total_days > 0 else 0
-            
-            if missing_pct > max_missing_pct_threshold:
-                message = (
-                    f"Excluding {camera}/{date_span} from behavior analysis due to excessive missing days "
-                    f"({missing_days}/{total_days} = {missing_pct:.1f}% > {max_missing_pct_threshold}%)"
-                )
-                self.excluded_events_missing_pct_count += self._log_exclusion(
-                    'missing_percentage', camera, date_span, pen_type, missing_pct, 
-                    max_missing_pct_threshold, message, analysis_type="behavior_analysis"
-                )
-                continue
-            
             pen_type, culprit_removal, datespan_gt = get_pen_info(camera, date_span, json_data)
-            if pen_type != "tail biting" or culprit_removal is None or culprit_removal == "Unknown" or culprit_removal == []:
-                reason = "Not a tail biting event or missing culprit removal info"
-                self._log_exclusion('other_reasons', camera, date_span, pen_type, reason, 
-                                    None, f"Excluding {camera}/{date_span}: {reason}", 
-                                    analysis_type="behavior_analysis")
-                self.excluded_elements['other_reasons'].append((camera, date_span, pen_type, reason))
-                continue
-            
             camera_label = camera.replace("Kamera", "Pen ")
+            
             self.logger.debug(f"Processing behavior data for tail biting event: {camera_label} / {date_span}")
             interpolated_data = processed_data.get('interpolated_data')
+            
             if interpolated_data is None or interpolated_data.empty:
                 reason = "Empty interpolated data"
-                self.excluded_elements['other_reasons'].append((camera, date_span, pen_type, reason))
-                self.logger.warning(f"Skipping {camera_label} / {date_span} due to empty interpolated data.")
+                self.data_filter.log_exclusion(
+                    'other_reasons', camera, date_span, pen_type, reason, 
+                    None, f"Skipping {camera_label} / {date_span} due to empty interpolated data.",
+                    analysis_type="behavior_analysis"
+                )
                 continue
                 
             # Check if any of our behavior metrics are in the data
             metrics_present = [metric for metric in self.behavior_metrics if metric in interpolated_data.columns]
             if not metrics_present:
                 reason = "No behavior metrics found in data"
-                self.excluded_elements['other_reasons'].append((camera, date_span, pen_type, reason))
-                self.logger.warning(f"Skipping {camera_label} / {date_span} due to missing behavior metrics.")
+                self.data_filter.log_exclusion(
+                    'other_reasons', camera, date_span, pen_type, reason,
+                    None, f"Skipping {camera_label} / {date_span} due to missing behavior metrics.",
+                    analysis_type="behavior_analysis"
+                )
                 continue
                 
             if not isinstance(interpolated_data.index, pd.DatetimeIndex):
@@ -188,7 +152,11 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
                     
             if not valid_removal_dts: 
                 reason = "No valid removal dates in data range (all before first data point)"
-                self.excluded_elements['other_reasons'].append((camera, date_span, pen_type, reason))
+                self.data_filter.log_exclusion(
+                    'other_reasons', camera, date_span, pen_type, reason, 
+                    None, f"No valid removal dates in range for {camera_label}. Skipping.",
+                    analysis_type="behavior_analysis"
+                )
                 self.logger.warning(f"No valid removal dates in range for {camera_label}. Skipping.")
                 continue
                 
@@ -347,17 +315,15 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
         json_data = load_json_data(self.path_manager.path_to_piglet_rearing_info)
         num_total_biting = sum(1 for p in self.processed_results if get_pen_info(p['camera'], p['date_span'], json_data)[0] == "tail biting")
         
-        # Count successful analyses across all metrics
-        num_analyzed = sum(1 for m in self.behavior_metrics if metric in self.pre_outbreak_stats and not self.pre_outbreak_stats[metric].empty)
+        # Get filtering summary
+        filter_summary = self.data_filter.get_summary_statistics()
         
-        total_excluded = self.excluded_events_count + getattr(self, 'excluded_events_missing_pct_count', 0)
-        num_other_reasons = num_total_biting - num_analyzed - total_excluded
-
+        # Count successful analyses across all metrics
+        num_analyzed = sum(1 for m in self.behavior_metrics if m in self.pre_outbreak_stats and not self.pre_outbreak_stats[m].empty)
+        
         self.logger.info(f"Attempted to analyze {num_total_biting} potential tail biting events for behavior metrics.")
         self.logger.info(f"Successfully analyzed at least one metric for {num_analyzed} events.")
-        self.logger.info(f"Excluded {self.excluded_events_count} events due to >{max_missing_threshold} consecutive missing days.")
-        self.logger.info(f"Excluded {self.excluded_events_missing_pct_count} events due to excessive missing days (>{max_missing_pct_threshold}%).")
-        self.logger.info(f"Excluded {num_other_reasons} events for other reasons (e.g., no valid removal date, empty data).")
+        self.logger.info(f"Filtering summary: {filter_summary}")
         
         # Perform a more detailed count of each metric
         for metric in self.behavior_metrics:
@@ -371,8 +337,6 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
         self.logger.info("Analyzing control pen statistics for behavior metrics comparison...")
         json_data = load_json_data(self.path_manager.path_to_piglet_rearing_info)
         results = {metric: [] for metric in self.behavior_metrics}
-        self.excluded_controls_count = 0
-        self.excluded_controls_missing_pct_count = 0
         
         if not self.processed_results:
             self.logger.error("No processed data available. Run preprocessing steps first.")
@@ -380,67 +344,52 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
                 self.control_stats[metric] = pd.DataFrame()
             return self.control_stats
             
-        max_missing_threshold = self.config.get('max_allowed_consecutive_missing_days', 3)
-        max_missing_pct_threshold = self.config.get('max_allowed_missing_days_pct', 50.0)
+        # First filter by quality metrics
+        quality_filtered_results, excluded_count, excluded_pct_count = self.data_filter.filter_by_quality_metrics(
+            self.processed_results, get_pen_info, json_data, analysis_type="control_analysis"
+        )
+        
+        # Then filter for control pens
+        control_pens = self.data_filter.filter_control_pens(
+            quality_filtered_results, get_pen_info, json_data
+        )
+        
+        if self.config.get('interpolate_resampled_data', False):
+            # interpolate filtered, resampled data to avoid NaN values
+            control_pens = DataProcessor().interpolate_resampled_data(control_pens)
+         
+        if self.config.get('save_preprocessed_data', False):
+            # Save filtered DataFrames before processing
+            if control_pens:
+                save_filtered_dataframes(
+                    filtered_results=control_pens,
+                    config=self.config,
+                    logger=self.logger,
+                    path_manager=self.path_manager,
+                    pen_type_override="control"
+                )
+        
+        # Store exclusion counts for reporting
+        self.excluded_controls_count = excluded_count
+        self.excluded_controls_missing_pct_count = excluded_pct_count
 
-        # Filter for control pens
-        control_processed_data = [p for p in self.processed_results if 
-                                get_pen_info(p['camera'], p['date_span'], json_data)[0] == "control"]
+        self.logger.info(f"Found {len(control_pens)} control pen datasets for behavior analysis")
         
-        self.logger.info(f"Found {len(control_processed_data)} control pen datasets for behavior analysis")
-        
-        for processed_data in control_processed_data:
+        for processed_data in control_pens:
             camera = processed_data['camera']
             date_span = processed_data['date_span']
-            quality_metrics = processed_data.get('quality_metrics', {})
-            consecutive_missing = quality_metrics.get('max_consecutive_missing_resampled', 0)
-            pen_type = "control"
-            
-            if consecutive_missing > max_missing_threshold:
-                message = (
-                    f"Excluding control pen {camera}/{date_span} due to {consecutive_missing} consecutive missing periods "
-                    f"in resampled data (threshold: {max_missing_threshold}). Raw missing days: {quality_metrics.get('missing_days_detected', 'unknown')}"
-                )
-                self.excluded_controls_count += self._log_exclusion(
-                    'consecutive_missing', camera, date_span, pen_type, consecutive_missing, 
-                    max_missing_threshold, message, analysis_type="control_analysis"
-                )
-                continue
-                
-            # Check for percentage of missing days
-            missing_days = quality_metrics.get('missing_days_detected', 0)
-            total_days = quality_metrics.get('total_expected_days', 0)
-            missing_pct = (missing_days / total_days * 100) if total_days > 0 else 0
-            
-            if missing_pct > max_missing_pct_threshold:
-                message = (
-                    f"Excluding control pen {camera}/{date_span} due to excessive missing days "
-                    f"({missing_days}/{total_days} = {missing_pct:.1f}% > {max_missing_pct_threshold}%)"
-                )
-                self.excluded_controls_missing_pct_count += self._log_exclusion(
-                    'missing_percentage', camera, date_span, pen_type, missing_pct, 
-                    max_missing_pct_threshold, message, analysis_type="control_analysis"
-                )
-                continue
-                
             camera_label = camera.replace("Kamera", "Pen ")
             interpolated_data = processed_data.get('interpolated_data')
-            
-            if interpolated_data is None or interpolated_data.empty:
-                reason = "Empty interpolated data"
-                self._log_exclusion('other_reasons', camera, date_span, pen_type, reason, 
-                   None, f"Skipping control pen {camera_label} / {date_span}: {reason}", 
-                   analysis_type="control_analysis")
-                self.excluded_elements['other_reasons'].append((camera, date_span, pen_type, reason))
-                self.logger.warning(f"Skipping control pen {camera_label} / {date_span} due to empty interpolated data.")
-                continue
             
             # Check if any of our behavior metrics are in the data
             metrics_present = [metric for metric in self.behavior_metrics if metric in interpolated_data.columns]
             if not metrics_present:
                 reason = "No behavior metrics found in data"
-                self.excluded_elements['other_reasons'].append((camera, date_span, pen_type, reason))
-                self.logger.warning(f"Skipping control pen {camera_label} / {date_span} due to missing behavior metrics.")
+                self.data_filter.log_exclusion(
+                    'other_reasons', camera, date_span, "control", reason,
+                    None, f"Skipping control pen {camera_label} / {date_span} due to missing behavior metrics.",
+                    analysis_type="control_analysis"
+                )
                 continue
                 
             if not isinstance(interpolated_data.index, pd.DatetimeIndex):
@@ -549,7 +498,7 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
                         for key in stat_keys:
                             window_stats[f'{window_days}d_window_{key}'] = np.nan
                             
-                        # Only proceed if we have data to analyze
+                        # Only proceed if there is data to analyze
                         if not window_data_all_cols.empty and metric in window_data_all_cols.columns:
                             window_data = window_data_all_cols[metric].dropna()
                             
@@ -625,18 +574,18 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
                 self.control_stats[metric] = pd.DataFrame()
                 self.logger.warning(f"No control pen statistics generated for {metric} after filtering.")
             
-        num_total_control = len(control_processed_data)
-        metrics_with_data = [m for m in self.behavior_metrics if m in self.control_stats and not self.control_stats[m].empty]
+        # Get filtering summary
+        filter_summary = self.data_filter.get_summary_statistics()
+        num_total_control = sum(1 for p in self.processed_results if get_pen_info(p['camera'], p['date_span'], json_data)[0] == "control")
         
         self.logger.info(f"Analyzed {num_total_control} control pens for behavior metrics.")
+        self.logger.info(f"Filtering summary: {filter_summary}")
+        
         for metric in self.behavior_metrics:
             if metric in self.control_stats and not self.control_stats[metric].empty:
                 num_analyzed = len(self.control_stats[metric][['pen', 'datespan']].drop_duplicates())
                 num_reference_points = len(self.control_stats[metric])
                 self.logger.info(f"  - {metric}: {num_analyzed} control pen datasets with {num_reference_points} reference points")
-        
-        self.logger.info(f"Excluded {self.excluded_controls_count} control pens due to >{max_missing_threshold} consecutive missing days.")
-        self.logger.info(f"Excluded {self.excluded_controls_missing_pct_count} control pens due to excessive missing days (>{max_missing_pct_threshold}%).")
         
         return self.control_stats
         
@@ -644,7 +593,7 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
         """Compare statistics between outbreak and control pens for behavior metrics."""
         self.logger.info("Comparing outbreak vs control pen statistics for behavior metrics...")
 
-        # For each metric, check if we have both outbreak and control data
+        # For each metric, check if there is data for both outbreak and control
         for metric in self.behavior_metrics:
             if metric not in self.pre_outbreak_stats or self.pre_outbreak_stats[metric] is None or self.pre_outbreak_stats[metric].empty:
                 self.logger.error(f"No pre-outbreak statistics available for {metric}. Cannot compare with controls.")
@@ -695,7 +644,7 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
                 outbreak_values = self.pre_outbreak_stats[metric][outbreak_col].dropna()
                 control_values = self.control_stats[metric][control_col].dropna()
 
-                if len(outbreak_values) < 2 or len(control_values) < 2:
+                if len(outbreak_values) < self.config.get('min_sample_values_comparison', 2) or len(control_values) < self.config.get('min_sample_values_comparison', 2):
                     self.logger.warning(f"Insufficient data for {metric} - {compare_metric} comparison.")
                     continue
 
@@ -743,7 +692,7 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
                     self.logger.error(f"Error comparing {metric}_{compare_metric}: {e}")
 
             # Save comparison results for this metric
-            if comparison_results['metrics']:  # Only if we have results
+            if comparison_results['metrics']:
                 # Save the comparison results per metric
                 self.comparison_results[metric] = comparison_dict
                 
@@ -779,44 +728,284 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
         
     def process_all_data(self):
         """Process all monitoring results and store them for analysis."""
-        self.logger.info("Processing all monitoring results for behavior analysis...")
+        return self.preprocess_monitoring_results()
+    
+    def analyze_activity_components(self):
+        """Analyze lying and not-lying pig components for both outbreak and control pens."""
+        self.logger.info("Analyzing activity components (lying vs not-lying pigs)...")
         
-        # Load data if not already loaded
-        if not hasattr(self, 'monitoring_results') or not self.monitoring_results:
-            self.load_data()
-            
-        if not self.monitoring_results:
-            self.logger.error("No monitoring results to process.")
-            return False
-            
-        # Clear any existing processed results
-        self.processed_results = []
+        required_metrics = ['num_pigs_lying', 'num_pigs_notLying']
+        missing_metrics = []
         
-        # Process each monitoring result
-        for result in self.monitoring_results:
-            processed_result = self.preprocess_data(result)
-            if processed_result is not None:
-                self.processed_results.append(processed_result)
+        for metric in required_metrics:
+            if metric not in self.pre_outbreak_stats or self.pre_outbreak_stats[metric].empty:
+                missing_metrics.append(metric)
+        
+        if missing_metrics:
+            self.logger.error(f"Missing required metrics for component analysis: {missing_metrics}")
+            return None
+        
+        # Initialize results
+        results = {
+            'outbreak_trajectories': pd.DataFrame(),
+            'control_trajectories': pd.DataFrame(),
+            'component_statistics': pd.DataFrame(),
+            'comparison_results': pd.DataFrame()
+        }
+        
+        # --- 1. Analyze Outbreak Component Trajectories ---
+        self.logger.info("Analyzing outbreak component trajectories...")
+        
+        outbreak_lying = self.pre_outbreak_stats['num_pigs_lying'].copy()
+        outbreak_not_lying = self.pre_outbreak_stats['num_pigs_notLying'].copy()
+        
+        # Extract trajectories for outbreak pens
+        days_before_list = self.config.get('days_before_list', [7, 3, 1])
+        days_list_with_removal = days_before_list + [0]
+        
+        outbreak_trajectory_data = []
+        
+        for idx, row in outbreak_lying.iterrows():
+            pen = row['pen']
+            datespan = row['datespan']
+            
+            # Get corresponding not lying data
+            not_lying_row = outbreak_not_lying[
+                (outbreak_not_lying['pen'] == pen) & 
+                (outbreak_not_lying['datespan'] == datespan)
+            ]
+            
+            if not_lying_row.empty:
+                continue
                 
-        self.logger.info(f"Successfully processed {len(self.processed_results)} monitoring results.")
-        
-        # Check if any of our behavior metrics are present in the processed data
-        metrics_found = set()
-        for processed_result in self.processed_results:
-            if 'interpolated_data' in processed_result and processed_result['interpolated_data'] is not None:
-                for metric in self.behavior_metrics:
-                    if metric in processed_result['interpolated_data'].columns:
-                        metrics_found.add(metric)
-                        
-        if metrics_found:
-            self.logger.info(f"Found the following behavior metrics in the data: {', '.join(metrics_found)}")
-        else:
-            self.logger.warning("None of the specified behavior metrics were found in the processed data.")
+            not_lying_row = not_lying_row.iloc[0]
             
-        return len(self.processed_results) > 0
+            # Extract trajectories (including removal day as day 0)
+            for d in days_list_with_removal:
+                if d == 0:
+                    lying_val = row.get('value_at_removal', np.nan)
+                    not_lying_val = not_lying_row.get('value_at_removal', np.nan)
+                else:
+                    lying_val = row.get(f'value_{d}d_before', np.nan)
+                    not_lying_val = not_lying_row.get(f'value_{d}d_before', np.nan)
+                
+                if pd.notna(lying_val) and pd.notna(not_lying_val):
+                    outbreak_trajectory_data.append({
+                        'pen': pen,
+                        'datespan': datespan,
+                        'days_before_removal': -d if d > 0 else 0,
+                        'lying_pigs': lying_val,
+                        'not_lying_pigs': not_lying_val,
+                        'group': 'outbreak'
+                    })
+        
+        if outbreak_trajectory_data:
+            results['outbreak_trajectories'] = pd.DataFrame(outbreak_trajectory_data)
+        
+        # --- 2. Analyze Control Component Trajectories ---
+        self.logger.info("Analyzing control component trajectories...")
+        
+        if ('num_pigs_lying' in self.control_stats and 'num_pigs_notLying' in self.control_stats and
+            not self.control_stats['num_pigs_lying'].empty and not self.control_stats['num_pigs_notLying'].empty):
+            
+            control_lying = self.control_stats['num_pigs_lying'].copy()
+            control_not_lying = self.control_stats['num_pigs_notLying'].copy()
+            
+            control_trajectory_data = []
+            
+            for idx, row in control_lying.iterrows():
+                pen = row['pen']
+                datespan = row['datespan']
+                
+                not_lying_row = control_not_lying[
+                    (control_not_lying['pen'] == pen) & 
+                    (control_not_lying['datespan'] == datespan)
+                ]
+                
+                if not_lying_row.empty:
+                    continue
+                    
+                not_lying_row = not_lying_row.iloc[0]
+                
+                # Extract trajectories (including reference day as day 0)
+                for d in days_list_with_removal:
+                    if d == 0:
+                        lying_val = row.get('value_at_reference', np.nan)
+                        not_lying_val = not_lying_row.get('value_at_reference', np.nan)
+                    else:
+                        lying_val = row.get(f'value_{d}d_before', np.nan)
+                        not_lying_val = not_lying_row.get(f'value_{d}d_before', np.nan)
+                    
+                    if pd.notna(lying_val) and pd.notna(not_lying_val):
+                        control_trajectory_data.append({
+                            'pen': pen,
+                            'datespan': datespan,
+                            'days_before_removal': -d if d > 0 else 0,
+                            'lying_pigs': lying_val,
+                            'not_lying_pigs': not_lying_val,
+                            'group': 'control'
+                        })
+            
+            if control_trajectory_data:
+                results['control_trajectories'] = pd.DataFrame(control_trajectory_data)
+        
+        # --- 3. Calculate Component Statistics by Day ---
+        self.logger.info("Calculating component statistics...")
+        
+        if not results['outbreak_trajectories'].empty:
+            # Calculate statistics by day for outbreak
+            outbreak_stats = results['outbreak_trajectories'].groupby('days_before_removal').agg({
+                'lying_pigs': ['mean', 'std', 'count', 'min', 'max'],
+                'not_lying_pigs': ['mean', 'std', 'count', 'min', 'max']
+            }).reset_index()
+            outbreak_stats['group'] = 'outbreak'
+            
+            # Rename columns for clarity
+            outbreak_stats.columns = [
+                'days_before_removal',
+                'lying_mean', 'lying_std', 'lying_count', 'lying_min', 'lying_max',
+                'not_lying_mean', 'not_lying_std', 'not_lying_count', 'not_lying_min', 'not_lying_max',
+                'group'
+            ]
+            
+            # Calculate total pigs (lying + not lying)
+            outbreak_stats['total_pigs_mean'] = outbreak_stats['lying_mean'] + outbreak_stats['not_lying_mean']
+            outbreak_stats['lying_percentage'] = (outbreak_stats['lying_mean'] / outbreak_stats['total_pigs_mean']) * 100
+            
+            if not results['control_trajectories'].empty:
+                # Calculate statistics by day for control
+                control_stats = results['control_trajectories'].groupby('days_before_removal').agg({
+                    'lying_pigs': ['mean', 'std', 'count', 'min', 'max'],
+                    'not_lying_pigs': ['mean', 'std', 'count', 'min', 'max']
+                }).reset_index()
+                control_stats['group'] = 'control'
+                
+                # Rename columns for clarity
+                control_stats.columns = [
+                    'days_before_removal',
+                    'lying_mean', 'lying_std', 'lying_count', 'lying_min', 'lying_max',
+                    'not_lying_mean', 'not_lying_std', 'not_lying_count', 'not_lying_min', 'not_lying_max',
+                    'group'
+                ]
+                
+                # Calculate total pigs
+                control_stats['total_pigs_mean'] = control_stats['lying_mean'] + control_stats['not_lying_mean']
+                control_stats['lying_percentage'] = (control_stats['lying_mean'] / control_stats['total_pigs_mean']) * 100
+                
+                # Combine outbreak and control statistics
+                results['component_statistics'] = pd.concat([outbreak_stats, control_stats], ignore_index=True)
+            else:
+                results['component_statistics'] = outbreak_stats
+        
+        # --- 4. Perform Comparison Analysis ---
+        self.logger.info("Performing component comparison analysis...")
+        
+        if not results['outbreak_trajectories'].empty and not results['control_trajectories'].empty:
+            # Find common days for comparison
+            outbreak_days = set(results['outbreak_trajectories']['days_before_removal'].unique())
+            control_days = set(results['control_trajectories']['days_before_removal'].unique())
+            common_days = sorted(list(outbreak_days & control_days))
+            
+            comparison_results = []
+            
+            for day in common_days:
+                # Get data for this specific day
+                outbreak_day_data = results['outbreak_trajectories'][
+                    results['outbreak_trajectories']['days_before_removal'] == day
+                ]
+                control_day_data = results['control_trajectories'][
+                    results['control_trajectories']['days_before_removal'] == day
+                ]
+                
+                # Compare lying pigs
+                outbreak_lying_values = outbreak_day_data['lying_pigs'].dropna()
+                control_lying_values = control_day_data['lying_pigs'].dropna()
+                
+                if len(outbreak_lying_values) >= 2 and len(control_lying_values) >= 2:
+                    u_stat_lying, p_value_lying = stats.mannwhitneyu(
+                        outbreak_lying_values, control_lying_values, alternative='two-sided'
+                    )
+                    
+                    # Calculate effect size for lying
+                    n1, n2 = len(outbreak_lying_values), len(control_lying_values)
+                    pooled_std = np.sqrt(((n1 - 1) * outbreak_lying_values.std()**2 + 
+                                        (n2 - 1) * control_lying_values.std()**2) / (n1 + n2 - 2))
+                    if pooled_std > 0:
+                        effect_size_lying = abs(outbreak_lying_values.mean() - control_lying_values.mean()) / pooled_std
+                    else:
+                        effect_size_lying = np.nan
+                else:
+                    p_value_lying = np.nan
+                    effect_size_lying = np.nan
+                
+                # Compare not lying pigs
+                outbreak_not_lying_values = outbreak_day_data['not_lying_pigs'].dropna()
+                control_not_lying_values = control_day_data['not_lying_pigs'].dropna()
+                
+                if len(outbreak_not_lying_values) >= 2 and len(control_not_lying_values) >= 2:
+                    u_stat_not_lying, p_value_not_lying = stats.mannwhitneyu(
+                        outbreak_not_lying_values, control_not_lying_values, alternative='two-sided'
+                    )
+                    
+                    # Calculate effect size for not lying
+                    n1, n2 = len(outbreak_not_lying_values), len(control_not_lying_values)
+                    pooled_std = np.sqrt(((n1 - 1) * outbreak_not_lying_values.std()**2 + 
+                                        (n2 - 1) * control_not_lying_values.std()**2) / (n1 + n2 - 2))
+                    if pooled_std > 0:
+                        effect_size_not_lying = abs(outbreak_not_lying_values.mean() - control_not_lying_values.mean()) / pooled_std
+                    else:
+                        effect_size_not_lying = np.nan
+                else:
+                    p_value_not_lying = np.nan
+                    effect_size_not_lying = np.nan
+                
+                comparison_results.append({
+                    'days_before_removal': day,
+                    'lying_p_value': p_value_lying,
+                    'lying_effect_size': effect_size_lying,
+                    'not_lying_p_value': p_value_not_lying,
+                    'not_lying_effect_size': effect_size_not_lying,
+                    'lying_outbreak_mean': outbreak_lying_values.mean() if len(outbreak_lying_values) > 0 else np.nan,
+                    'lying_control_mean': control_lying_values.mean() if len(control_lying_values) > 0 else np.nan,
+                    'not_lying_outbreak_mean': outbreak_not_lying_values.mean() if len(outbreak_not_lying_values) > 0 else np.nan,
+                    'not_lying_control_mean': control_not_lying_values.mean() if len(control_not_lying_values) > 0 else np.nan
+                })
+            
+            if comparison_results:
+                results['comparison_results'] = pd.DataFrame(comparison_results)
+        
+        # --- 5. Save Results to CSV Files ---
+        output_dir = self.config.get('output_dir', '.')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save outbreak trajectories
+        if not results['outbreak_trajectories'].empty:
+            outbreak_traj_file = os.path.join(output_dir, 'activity_components_outbreak_trajectories.csv')
+            results['outbreak_trajectories'].to_csv(outbreak_traj_file, index=False)
+            self.logger.info(f"Saved outbreak component trajectories to {outbreak_traj_file}")
+        
+        # Save control trajectories
+        if not results['control_trajectories'].empty:
+            control_traj_file = os.path.join(output_dir, 'activity_components_control_trajectories.csv')
+            results['control_trajectories'].to_csv(control_traj_file, index=False)
+            self.logger.info(f"Saved control component trajectories to {control_traj_file}")
+        
+        # Save component statistics
+        if not results['component_statistics'].empty:
+            stats_file = os.path.join(output_dir, 'activity_components_statistics.csv')
+            results['component_statistics'].to_csv(stats_file, index=False)
+            self.logger.info(f"Saved component statistics to {stats_file}")
+        
+        # Save comparison results
+        if not results['comparison_results'].empty:
+            comparison_file = os.path.join(output_dir, 'activity_components_comparison.csv')
+            results['comparison_results'].to_csv(comparison_file, index=False)
+            self.logger.info(f"Saved component comparison results to {comparison_file}")
+        
+        return results
         
     def run_complete_behavior_analysis(self):
-        """Run all three analysis steps for behavior metrics and return combined results."""
+        """Run all analysis steps for behavior metrics and return combined results."""
         results = {}
         
         # Process all data first
@@ -839,6 +1028,18 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
         comparison_results = self.compare_outbreak_vs_control_statistics()
         results['comparison_results'] = {metric: bool(comparison) for metric, comparison in comparison_results.items()}
         
+        # Step 4: Analyze activity components (lying vs not-lying)
+        component_results = self.analyze_activity_components()
+        if component_results:
+            results['component_analysis'] = {
+                'outbreak_trajectories': not component_results['outbreak_trajectories'].empty,
+                'control_trajectories': not component_results['control_trajectories'].empty,
+                'component_statistics': not component_results['component_statistics'].empty,
+                'comparison_results': not component_results['comparison_results'].empty
+            }
+        else:
+            results['component_analysis'] = {'error': 'No component analysis performed'}
+        
         self.logger.info("Completed behavior metrics analysis.")
         
         # Log summary of results
@@ -849,5 +1050,13 @@ class PigBehaviorAnalyzer(ThresholdMonitoringMixin, DataProcessor):
             comparison_count = len(self.comparison_results.get(metric, {}))
             
             self.logger.info(f"{metric}: {outbreak_count} outbreaks, {control_count} controls, {comparison_count} comparisons")
+        
+        # Log component analysis summary
+        if 'component_analysis' in results and 'error' not in results['component_analysis']:
+            self.logger.info("\n=== Component Analysis Summary ===")
+            self.logger.info(f"Outbreak trajectories available: {results['component_analysis']['outbreak_trajectories']}")
+            self.logger.info(f"Control trajectories available: {results['component_analysis']['control_trajectories']}")
+            self.logger.info(f"Component statistics available: {results['component_analysis']['component_statistics']}")
+            self.logger.info(f"Comparison results available: {results['component_analysis']['comparison_results']}")
         
         return results

@@ -69,53 +69,7 @@ Event Exclusion: 8 total event(s) excluded from analysis due to missing data:
 DETAILED EXCLUSION REPORT
 --------------------------------------------------------------------------------
 
-Exclusions from Tail Biting Event Analysis:
-
-  Elements excluded due to consecutive missing periods:
-  - Pen 4 / 220510_220529 (tail biting): 4 consecutive missing periods (threshold: 3)
-  - Pen 5 / 230227_230406 (control): 6 consecutive missing periods (threshold: 3)
-  - Pen 6 / 230227_230406 (tail biting): 6 consecutive missing periods (threshold: 3)
-
-  Elements excluded due to excessive missing days percentage:
-  - Pen 1 / 220505_220530 (control): 96.2% missing days (threshold: 50.0%)
-  - Pen 2 / 220505_220530 (control): 92.3% missing days (threshold: 50.0%)
-  - Pen 3 / 220505_220529 (control): 96.0% missing days (threshold: 50.0%)
-  - Pen 5 / 220510_220529 (control): 85.0% missing days (threshold: 50.0%)
-  - Pen 6 / 220509_220530 (control): 95.5% missing days (threshold: 50.0%)
-
-  Elements excluded for other reasons:
-  - Pen 1 / 211228_220119 (control): Not a tail biting event or missing culprit removal info
-  - Pen 1 / 220726_220831 (control): Not a tail biting event or missing culprit removal info
-  - Pen 2 / 211227_220119 (control): Not a tail biting event or missing culprit removal info
-  - Pen 2 / 220725_220831 (control): Not a tail biting event or missing culprit removal info
-  - Pen 2 / 221219_230125 (control): Not a tail biting event or missing culprit removal info
-  - Pen 2 / 230227_230405 (control): Not a tail biting event or missing culprit removal info
-  - Pen 3 / 211222_220119 (control): Not a tail biting event or missing culprit removal info
-  - Pen 3 / 220725_220905 (control): Not a tail biting event or missing culprit removal info
-  - Pen 3 / 221219_230125 (control): Not a tail biting event or missing culprit removal info
-  - Pen 3 / 230227_230406 (control): Not a tail biting event or missing culprit removal info
-  - Pen 4 / 211229_220119 (control): Not a tail biting event or missing culprit removal info
-  - Pen 4 / 220228_220407 (control): Not a tail biting event or missing culprit removal info
-  - Pen 4 / 220725_220905 (control): Not a tail biting event or missing culprit removal info
-  - Pen 5 / 211231_220119 (control): Not a tail biting event or missing culprit removal info
-  - Pen 5 / 220228_220407 (control): Not a tail biting event or missing culprit removal info
-  - Pen 5 / 221219_230126 (control): Not a tail biting event or missing culprit removal info
-  - Pen 6 / 211230_220120 (control): Not a tail biting event or missing culprit removal info
-  - Pen 6 / 220228_220407 (control): Not a tail biting event or missing culprit removal info
-  - Pen 6 / 220725_220905 (control): Not a tail biting event or missing culprit removal info
-  - Pen 6 / 221219_230126 (control): Not a tail biting event or missing culprit removal info
-
-Exclusions from Control Pen Analysis:
-
-  Elements excluded due to consecutive missing periods:
-  - Pen 5 / 230227_230406 (control): 6 consecutive missing periods (threshold: 3)
-
-  Elements excluded due to excessive missing days percentage:
-  - Pen 1 / 220505_220530 (control): 96.2% missing days (threshold: 50.0%)
-  - Pen 2 / 220505_220530 (control): 92.3% missing days (threshold: 50.0%)
-  - Pen 3 / 220505_220529 (control): 96.0% missing days (threshold: 50.0%)
-  - Pen 5 / 220510_220529 (control): 85.0% missing days (threshold: 50.0%)
-  - Pen 6 / 220509_220530 (control): 95.5% missing days (threshold: 50.0%)
+No detailed exclusion information available.
 
 DESCRIPTIVE PRE-OUTBREAK ANALYSIS
 --------------------------------------------------------------------------------
@@ -151,53 +105,45 @@ CONTROL COMPARISON ANALYSIS
 Control data analyzed: 6 pens with 100 reference points.
 
 Significant Differences Between Tail Biting and Control Pens:
-  - Value at Removal: TB=-0.036±0.367, Control=0.714±0.124, p=0.0000, large effect size (4.04)
-  - 1d_window_avg: TB=0.022±0.367, Control=0.716±0.121, p=0.0000, large effect size (3.77)
-  - 3d Window Average: TB=0.162±0.364, Control=0.717±0.118, p=0.0000, large effect size (3.05)
-  - 5d_window_avg: TB=0.288±0.343, Control=0.714±0.117, p=0.0000, large effect size (2.45)
-  - 7d Window Average: TB=0.383±0.297, Control=0.711±0.117, p=0.0000, large effect size (2.05)
-  - 1d_window_slope: TB=-0.122±0.124, Control=-0.005±0.037, p=0.0001, large effect size (1.93)
-  - 3d Window Slope: TB=-0.140±0.118, Control=-0.001±0.028, p=0.0000, large effect size (2.61)
-  - 5d_window_slope: TB=-0.127±0.089, Control=0.003±0.023, p=0.0000, large effect size (3.12)
-  - 7d Window Slope: TB=-0.106±0.062, Control=0.003±0.020, p=0.0000, large effect size (3.54)
-  - 1d Absolute Change: TB=-0.122±0.124, Control=-0.005±0.037, p=0.0001, large effect size (1.93)
-  - 3d Absolute Change: TB=-0.408±0.340, Control=-0.003±0.083, p=0.0000, large effect size (2.60)
-  - abs_change_5d: TB=-0.598±0.367, Control=0.010±0.111, p=0.0000, large effect size (3.40)
-  - 7d Absolute Change: TB=-0.713±0.355, Control=0.007±0.129, p=0.0000, large effect size (3.77)
+  - Value at Removal: TB=-0.036±0.367, Control=0.729±0.114, p=0.0000, large effect size (4.24)
+  - 1d_window_avg: TB=0.022±0.367, Control=0.728±0.114, p=0.0000, large effect size (3.91)
+  - 3d Window Average: TB=0.162±0.364, Control=0.724±0.115, p=0.0000, large effect size (3.12)
+  - 5d_window_avg: TB=0.288±0.343, Control=0.719±0.116, p=0.0000, large effect size (2.48)
+  - 7d Window Average: TB=0.383±0.297, Control=0.714±0.115, p=0.0000, large effect size (2.08)
+  - 1d_window_slope: TB=-0.122±0.124, Control=0.002±0.032, p=0.0000, large effect size (2.15)
+  - 3d Window Slope: TB=-0.140±0.118, Control=0.004±0.024, p=0.0000, large effect size (2.78)
+  - 5d_window_slope: TB=-0.127±0.089, Control=0.005±0.019, p=0.0000, large effect size (3.31)
+  - 7d Window Slope: TB=-0.106±0.062, Control=0.006±0.017, p=0.0000, large effect size (3.82)
+  - 1d Absolute Change: TB=-0.122±0.124, Control=0.002±0.032, p=0.0000, large effect size (2.15)
+  - 3d Absolute Change: TB=-0.408±0.340, Control=0.011±0.070, p=0.0000, large effect size (2.79)
+  - abs_change_5d: TB=-0.598±0.367, Control=0.027±0.090, p=0.0000, large effect size (3.70)
+  - 7d Absolute Change: TB=-0.713±0.355, Control=0.031±0.113, p=0.0000, large effect size (4.09)
 
 *See 'outbreak_vs_control_comparison.png' for detailed visualizations.*
 
 INDIVIDUAL VARIATION ANALYSIS
 --------------------------------------------------------------------------------
 Pattern Distribution in Outbreak Events:
-  - Gradual-decline: 7 outbreaks (35.0%)
-  - Sudden-decline: 5 outbreaks (25.0%)
-  - Moderate-decline: 5 outbreaks (25.0%)
-  - Erratic-decline: 3 outbreaks (15.0%)
-
-Pen Consistency: 0/6 pens (0.0%) show consistent pattern categories across multiple outbreaks.
+  - Gleichmäßige Abnahme: 11 outbreaks (55.0%)
+  - Steile Abnahme: 5 outbreaks (25.0%)
+  - Stabil: 4 outbreaks (20.0%)
 
 Key Metrics by Pattern Category:
-  - Gradual-decline (n=7):
-    * Value at removal: 0.002
-    * 7-day change: -0.580
-    * 7-day slope: -0.084
-    * 3-day slope: -0.079
-  - Sudden-decline (n=5):
-    * Value at removal: -0.178
-    * 7-day change: -0.936
-    * 7-day slope: -0.131
-    * 3-day slope: -0.275
-  - Moderate-decline (n=5):
-    * Value at removal: 0.238
-    * 7-day change: -0.563
-    * 7-day slope: -0.090
-    * 3-day slope: -0.136
-  - Erratic-decline (n=3):
-    * Value at removal: -0.347
-    * 7-day change: -0.900
-    * 7-day slope: -0.143
-    * 3-day slope: -0.066
+  - Gleichmäßige Abnahme (n=11):
+    * Value at removal: -0.158
+    * 7-day change: -0.771
+    * 7-day slope: -0.117
+    * 3-day slope: -0.120
+  - Steile Abnahme (n=5):
+    * Value at removal: -0.209
+    * 7-day change: -0.987
+    * 7-day slope: -0.144
+    * 3-day slope: -0.278
+  - Stabil (n=4):
+    * Value at removal: 0.516
+    * 7-day change: -0.210
+    * 7-day slope: -0.029
+    * 3-day slope: -0.025
 
 *See 'individual_variation_analysis.png' for detailed visualizations.*
 
@@ -227,10 +173,3 @@ Component Contributions to 7-Day Posture Difference Change:
   - Hanging tails contribution: -50.0%
 
 *See 'posture_component_analysis.png' for detailed visualizations.*
-
-MONITORING THRESHOLD ANALYSIS
---------------------------------------------------------------------------------
-No monitoring threshold analysis available.
-
-GENERAL OBSERVATIONS & RECOMMENDATIONS
---------------------------------------------------------------------------------

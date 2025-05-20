@@ -61,7 +61,6 @@ def parse_date_from_filename(filename):
             date_str = f"{parts[year_index]}{parts[year_index+1]}{parts[year_index+2]}"
             return datetime.strptime(date_str, '%Y%m%d').date()
         else:
-            # Fallback for older yy format if primary fails (less reliable)
             for i, part in enumerate(parts):
                 if len(part) == 6 and part.isdigit() : # yymmdd
                      return datetime.strptime(part,'%y%m%d').date()
@@ -93,9 +92,9 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
     data_list = []
     dir = os.path.join(dir, compartment) # Path to compartment
 
-    # Load batch info file (adjust path as needed)
+    # Load batch info file
     if compartment == "piglet_rearing":
-        config_file = "rearing_batch_info.json" # Or piglet_rearing_info.json? Check your naming
+        config_file = "rearing_batch_info.json"
     elif compartment == "fattening":
         config_file = "fattening_batch_info.json"
     else:
@@ -104,23 +103,17 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
 
     path_to_batch_info = os.path.join(path_to_configs, config_file)
     if not os.path.exists(path_to_batch_info):
-         # Try the alternative name based on your class init PathManager usage
          path_to_batch_info = PathManager().path_to_piglet_rearing_info if compartment == "piglet_rearing" else None # Add equivalent for fattening if needed
          if not path_to_batch_info or not os.path.exists(path_to_batch_info):
               logger.error(f"Batch info file not found at {path_to_batch_info} or alternative path.")
-              # Decide: either return [] or proceed without type info from json
-              # return [] # Stricter option
-              batch_info_data = [] # Proceed without type info
+              batch_info_data = []
          else:
              batch_info_data = load_json_data(path_to_batch_info)
     else:
          batch_info_data = load_json_data(path_to_batch_info)
 
-
-    # Convert JSON data for faster lookup (optional, depends on json structure)
     video_timeframes = {item["camera"] + "_" + item["datespan"]: item for item in batch_info_data}
 
-    # Handle specific camera or all
     if camera:
         camera_dirs = [c for c in os.listdir(dir) if c == camera and os.path.isdir(os.path.join(dir, c))]
     else:
@@ -147,12 +140,10 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
                 'total_expected_days': 0
             }
 
-            # Get type from JSON if available
             search_key = f"{camera_name}_{date_span}"
             if search_key in video_timeframes:
                 camera_dict['type'] = video_timeframes[search_key].get('type', 'unknown') # Use .get for safety
 
-            # --- Missing Day Detection ---
             expected_dates = get_expected_dates(date_span)
             camera_dict['total_expected_days'] = len(expected_dates)
             found_dates_in_span = set()
@@ -171,24 +162,19 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
                     file_date = parse_date_from_filename(f)
                     if file_date:
                         found_dates_in_span.add(file_date)
-                # Optionally log non-csv files if unexpected
-                # else:
-                #    logger.debug(f"Ignoring non-csv file: {f} in {date_span_dir_path}")
 
 
             camera_dict['data_paths'] = csv_files
             camera_dict['found_dates'] = sorted(list(found_dates_in_span))
 
-            if expected_dates: # Only calculate missing if we could parse the datespan
+            if expected_dates:
                  missing_dates_set = set(expected_dates) - found_dates_in_span
                  camera_dict['missing_dates'] = sorted(list(missing_dates_set))
                  if camera_dict['missing_dates']:
                      logger.warning(f"Missing {len(camera_dict['missing_dates'])} day(s) for {camera_name}/{date_span}: {camera_dict['missing_dates']}")
 
-            # --- Load DataFrames ---
             if as_df_list and csv_files:
                 try:
-                    # Make sure load_data_from_list handles potential errors in load_data_as_dataframe
                     df_list = load_data_from_list(csv_files)
                     # Filter out None values if load_data_as_dataframe returns None on error
                     camera_dict['dataframes'] = [df for df in df_list if df is not None and not df.empty]
@@ -204,8 +190,6 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
 
             data_list.append(camera_dict)
 
-    # Apply sorting key after collecting all data
-    # Make sure sorting_key handles potential missing keys gracefully if needed
     try:
         data_list.sort(key=sorting_key)
     except KeyError as e:
@@ -214,7 +198,6 @@ def load_monitoring_pipeline_results(dir, path_to_configs, compartment="piglet_r
 
     return data_list
 
-# Modify load_data_as_dataframe to be more robust
 def load_data_as_dataframe(path_to_dataframe):
     """
     Loads a DataFrame from a .csv file and transforms it. Returns None on error.
@@ -224,18 +207,20 @@ def load_data_as_dataframe(path_to_dataframe):
     try:
         df = pd.read_csv(path_to_dataframe, parse_dates=['start_timestamp', 'end_timestamp'])
 
+        filename = os.path.basename(path_to_dataframe)
+        
         # Check for required columns immediately after loading
         missing_raw_cols = [col for col in required_cols_raw if col not in df.columns]
         if missing_raw_cols:
-             logger.error(f"Missing required columns {missing_raw_cols} in raw file: {path_to_dataframe}. Skipping this file.")
+             logger.error(f"Missing required columns {missing_raw_cols} in raw file: {filename}. Skipping this file.")
              return None
 
          # Check for empty dataframe
         if df.empty:
-             logger.warning(f"Empty dataframe loaded from: {path_to_dataframe}. Skipping this file.")
+             logger.warning(f"Empty dataframe loaded from: {filename}. Skipping this file.")
              return None
 
-        # Proceed with transformations...
+        # Proceed with transformations
         if not df['start_timestamp'].is_monotonic_increasing:
             df = df.sort_values('start_timestamp').reset_index(drop=True)
 
@@ -245,8 +230,6 @@ def load_data_as_dataframe(path_to_dataframe):
         df['end_time'] = df['end_timestamp'].dt.time
         df.drop(['start_timestamp', 'end_timestamp'], axis=1, inplace=True)
 
-        # Define new order of columns - ensure all exist or handle missing ones
-        # Check optional columns exist before including them in the reorder list
         optional_cols = ['start_frame', 'end_frame', 'num_pig_detections', 'num_pigs_lying', 'num_pigs_notLying', 'activity']
         base_order = ['datetime', 'start_date', 'start_time', 'end_time', 'num_tail_detections', 'num_tails_upright', 'num_tails_hanging']
         present_optional_cols = [col for col in optional_cols if col in df.columns]
@@ -260,33 +243,32 @@ def load_data_as_dataframe(path_to_dataframe):
         df = df[(df['start_time'] >= pd.to_datetime('08:00:00').time()) &
                 (df['end_time'] <= pd.to_datetime('16:30:00').time())]
 
-        # Check again if filtering made it empty
         if df.empty:
-             logger.warning(f"Dataframe became empty after time filtering: {path_to_dataframe}. Skipping.")
+             logger.warning(f"Dataframe became empty after time filtering: {filename}. Skipping.")
              return None
 
         df.drop_duplicates(subset='datetime', keep='first', inplace=True)
 
         # Fill intra-day gaps
-        df = fill_dataframe_with_nan(df) # fill_dataframe_with_nan needs to be robust
+        df = fill_dataframe_with_nan(df)
 
         df.reset_index(drop=True, inplace=True)
 
         # Final check for emptiness after processing
         if df.empty:
-             logger.warning(f"Dataframe became empty after all processing: {path_to_dataframe}. Skipping.")
+             logger.warning(f"Dataframe became empty after all processing: {filename}. Skipping.")
              return None
 
         return df
 
     except pd.errors.EmptyDataError:
-        logger.error(f"EmptyDataError: No data in file: {path_to_dataframe}")
+        logger.error(f"EmptyDataError: No data in file: {filename}")
         return None
     except FileNotFoundError:
-         logger.error(f"FileNotFoundError: File not found: {path_to_dataframe}")
+         logger.error(f"FileNotFoundError: File not found: {filename}")
          return None
     except Exception as e:
-        logger.error(f"Failed to load or process dataframe {path_to_dataframe}: {e}", exc_info=True) # Log traceback
+        logger.error(f"Failed to load or process dataframe {filename}: {e}", exc_info=True) # Log traceback
         return None
 
 
@@ -313,28 +295,16 @@ def fill_dataframe_with_nan(df):
 
         start_date = df.index.min().date()
         start_time = pd.Timestamp(start_date) + pd.Timedelta(hours=8)
-        # Use the actual max time from data, but ensure it's within the day, or use fixed 16:30
-        # end_time_data = df.index.max()
-        # end_time_fixed = pd.Timestamp(start_date) + pd.Timedelta(hours=16, minutes=29, seconds=59)
-        # end_time = min(end_time_data, end_time_fixed) # Choose the earlier end time if data stops early
-        end_time = pd.Timestamp(start_date) + pd.Timedelta(hours=16, minutes=29, seconds=59) # Keep fixed end time
+        end_time = pd.Timestamp(start_date) + pd.Timedelta(hours=16, minutes=29, seconds=59)
 
         # Ensure start_time is not after end_time
         if start_time > end_time:
             logger.warning(f"Calculated start_time {start_time} is after end_time {end_time}. Check data range.")
-            # Use data min/max perhaps? Or just return df?
-            # For now, stick to the fixed range if possible
-            start_time = min(start_time, end_time) # Adjust start if needed, though unlikely
+            start_time = min(start_time, end_time)
 
         full_time_range = pd.date_range(start=start_time, end=end_time, freq='S')
 
-        # Use reindex instead of merge for potentially better performance and handling
         df_filled = df.reindex(full_time_range)
-
-        # Reindex might drop non-index columns, check if this happens.
-        # If using join:
-        # df_template = pd.DataFrame(index=full_time_range)
-        # df_filled = df_template.join(df, how='left') # Join original data onto the template
 
         df_filled.index.name = 'datetime' # Ensure index has name
         df_filled.reset_index(inplace=True) # Move index back to column
@@ -413,9 +383,6 @@ def get_mvg_avg(df, rolling_window):
     pandas.DataFrame: A DataFrame containing the moving averages for the specified columns.
     """
 
-    # Select the relevant columns from the input DataFrame and calculate their moving average.
-    # The 'window' parameter defines the size of the moving window.
-    # 'min_periods' is set to 1 to make sure that we get output even if there are missing values.
     df_mvg_avg = df[['num_tails_upright', 'num_tails_hanging', 'num_pigs_lying',
                     'num_pigs_notLying', 'activity']].rolling(window=rolling_window, min_periods=1).mean()
     df_mvg_avg["datetime"] = df["datetime"]
