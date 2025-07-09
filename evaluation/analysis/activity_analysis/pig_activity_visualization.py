@@ -145,7 +145,7 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
                 color=plt.rcParams['text.color'],
                 bbox=bbox_props)
     
-    def visualize_behavior_metrics(self, metric=None, save_path=None):
+    def visualize_behavior_metrics(self, metric=None, save_path=None, show=False):
         """
         Create visualizations for behavior metrics analysis.
         
@@ -454,10 +454,12 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
             except Exception as e:
                 self.logger.error(f"Failed to save {current_metric} visualization to {metric_save_path}: {e}")
             finally:
+                if show:
+                    plt.show()
                 plt.close(fig)            
         return saved_files
     
-    def visualize_behavior_comparison(self, metric=None, save_path=None):
+    def visualize_behavior_comparison(self, metric=None, save_path=None, show=False):
         """
         Create visualizations comparing outbreak and control statistics for behavior metrics.
         
@@ -775,10 +777,12 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
             except Exception as e:
                 self.logger.error(f"Failed to save {current_metric} comparison visualization: {e}")
             finally:
+                if show:
+                    plt.show()
                 plt.close(fig)
         return saved_files
     
-    def visualize_activity_components(self, save_path=None):
+    def visualize_activity_components(self, save_path=None, show=False):
         """Create visualizations showing the individual components (lying vs not lying pigs)."""
         self.logger.info("Visualizing lying components (lying vs not lying pigs)...")
         set_plotting_style(self.config)
@@ -1047,6 +1051,8 @@ class PigBehaviorVisualizer(PigBehaviorAnalyzer):
         except Exception as e:
             self.logger.error(f"Failed to save lying component visualization: {e}")
         finally:
+            if show:
+                plt.show()
             plt.close(fig)
         
         return save_path

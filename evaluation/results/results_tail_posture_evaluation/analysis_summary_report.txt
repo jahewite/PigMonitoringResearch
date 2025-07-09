@@ -105,19 +105,19 @@ CONTROL COMPARISON ANALYSIS
 Control data analyzed: 6 pens with 100 reference points.
 
 Significant Differences Between Tail Biting and Control Pens:
-  - Value at Removal: TB=-0.036±0.367, Control=0.735±0.116, p=0.0000, large effect size (4.26)
-  - 1d_window_avg: TB=0.022±0.367, Control=0.736±0.114, p=0.0000, large effect size (3.96)
-  - 3d Window Average: TB=0.162±0.364, Control=0.739±0.110, p=0.0000, large effect size (3.25)
-  - 5d_window_avg: TB=0.288±0.343, Control=0.737±0.109, p=0.0000, large effect size (2.65)
-  - 7d Window Average: TB=0.383±0.297, Control=0.734±0.107, p=0.0000, large effect size (2.27)
-  - 1d_window_slope: TB=-0.122±0.124, Control=-0.002±0.025, p=0.0001, large effect size (2.19)
-  - 3d Window Slope: TB=-0.140±0.118, Control=-0.002±0.022, p=0.0000, large effect size (2.70)
-  - 5d_window_slope: TB=-0.127±0.089, Control=0.001±0.021, p=0.0000, large effect size (3.16)
-  - 7d Window Slope: TB=-0.106±0.062, Control=0.003±0.017, p=0.0000, large effect size (3.69)
-  - 1d Absolute Change: TB=-0.122±0.124, Control=-0.002±0.025, p=0.0001, large effect size (2.19)
-  - 3d Absolute Change: TB=-0.408±0.340, Control=-0.004±0.065, p=0.0000, large effect size (2.72)
-  - abs_change_5d: TB=-0.598±0.367, Control=0.006±0.096, p=0.0000, large effect size (3.53)
-  - 7d Absolute Change: TB=-0.713±0.355, Control=0.011±0.111, p=0.0000, large effect size (4.05)
+  - Value at Removal: TB=-0.036±0.367, Control=0.731±0.111, p=0.0000, large effect size (4.29)
+  - 1d_window_avg: TB=0.022±0.367, Control=0.734±0.107, p=0.0000, large effect size (4.02)
+  - 3d Window Average: TB=0.162±0.364, Control=0.736±0.102, p=0.0000, large effect size (3.31)
+  - 5d_window_avg: TB=0.288±0.343, Control=0.736±0.098, p=0.0000, large effect size (2.73)
+  - 7d Window Average: TB=0.383±0.297, Control=0.735±0.095, p=0.0000, large effect size (2.38)
+  - 1d_window_slope: TB=-0.122±0.124, Control=-0.005±0.032, p=0.0001, large effect size (2.02)
+  - 3d Window Slope: TB=-0.140±0.118, Control=-0.002±0.025, p=0.0000, large effect size (2.65)
+  - 5d_window_slope: TB=-0.127±0.089, Control=-0.001±0.019, p=0.0000, large effect size (3.18)
+  - 7d Window Slope: TB=-0.106±0.062, Control=0.001±0.016, p=0.0000, large effect size (3.72)
+  - 1d Absolute Change: TB=-0.122±0.124, Control=-0.005±0.032, p=0.0001, large effect size (2.02)
+  - 3d Absolute Change: TB=-0.408±0.340, Control=-0.006±0.071, p=0.0000, large effect size (2.67)
+  - abs_change_5d: TB=-0.598±0.367, Control=-0.004±0.089, p=0.0000, large effect size (3.53)
+  - 7d Absolute Change: TB=-0.713±0.355, Control=-0.000±0.104, p=0.0000, large effect size (4.10)
 
 *See 'outbreak_vs_control_comparison.png' for detailed visualizations.*
 

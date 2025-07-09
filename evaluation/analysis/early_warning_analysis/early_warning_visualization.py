@@ -520,8 +520,8 @@ class EarlyWarningVisualizer:
         return figures
     
     def visualize_confusion_matrix(self, results, visualization_type='heatmap', 
-                                include_levels=None, save_plot=True, show_plot=False,
-                                figsize=None, title_suffix=""):
+                            include_levels=None, save_plot=True, show_plot=False,
+                            figsize=None, title_suffix=""):
         """
         Visualize confusion matrices for early warning threshold evaluation results.
         
@@ -569,10 +569,10 @@ class EarlyWarningVisualizer:
                                             save_plot, show_plot, figsize, title_suffix)
         elif visualization_type == 'subplots':
             return self._plot_confusion_subplots(results, available_levels, level_translations,
-                                            save_plot, show_plot, figsize, title_suffix)
+                                            save_plot, figsize, title_suffix, show_plot)
         elif visualization_type == 'metrics_comparison':
             return self._plot_metrics_comparison(results, available_levels, level_translations,
-                                            save_plot, show_plot, figsize, title_suffix)
+                                            save_plot, figsize, title_suffix, show_plot)
         else:
             self.logger.error(f"Unknown visualization_type: {visualization_type}")
             return None
@@ -651,7 +651,7 @@ class EarlyWarningVisualizer:
         return fig
 
     def _plot_confusion_subplots(self, results, levels, level_translations,
-                                save_plot, show_plot, figsize, title_suffix):
+                                save_plot, figsize, title_suffix, show_plot=True):
         """Plot detailed confusion matrix information in subplots."""
         
         n_levels = len(levels)
@@ -735,7 +735,7 @@ class EarlyWarningVisualizer:
         return fig
 
     def _plot_metrics_comparison(self, results, levels, level_translations,
-                                save_plot, show_plot, figsize, title_suffix):
+                                save_plot, figsize, title_suffix, show_plot=True):
         """Plot comparison of metrics across different threshold levels."""
         
         if figsize is None:

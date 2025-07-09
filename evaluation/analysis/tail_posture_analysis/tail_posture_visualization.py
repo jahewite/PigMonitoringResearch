@@ -15,7 +15,7 @@ from datetime import datetime
 
 from pipeline.utils.general import load_json_data
 from pipeline.utils.data_analysis_utils import get_pen_info
-from evaluation.analysis.tail_posture_analysis.analysis import TailPostureAnalyzer
+from evaluation.analysis.tail_posture_analysis.tail_posture_analyzer import TailPostureAnalyzer
 from evaluation.utils.utils import COLORS, PATTERN_COLORS, lighten_color, set_plotting_style
 
 class TailPostureVisualizer(TailPostureAnalyzer):
@@ -141,7 +141,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
                 color=plt.rcParams['text.color'], # Use default text color
                 bbox=bbox_props)
     
-    def visualize_pre_outbreak_patterns(self, save_path=None):
+    def visualize_pre_outbreak_patterns(self, save_path=None, show=False):
         """Creates visualizations to understand pre-outbreak patterns."""
         self.logger.info("Visualizing descriptive pre-outbreak patterns...")
         set_plotting_style(self.config)
@@ -506,6 +506,9 @@ class TailPostureVisualizer(TailPostureAnalyzer):
             self.logger.info(f"Saved pre-outbreak pattern visualization to {save_path}")
         except Exception as e:
             self.logger.error(f"Failed to save pre-outbreak visualization to {save_path}: {e}")
+        
+        if show:
+            plt.show()
         plt.close(fig)
 
         # Collect comprehensive statistics for logging
@@ -659,7 +662,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
 
         return bp
     
-    def visualize_comparison_with_controls(self, save_path=None):
+    def visualize_comparison_with_controls(self, save_path=None, show=False):
         """Create a side-by-side visualization comparing tail biting pens to control pens."""
         self.logger.info("Visualizing comparison between outbreak and control pens...")
         set_plotting_style(self.config) # Apply style
@@ -1022,6 +1025,8 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         except Exception as e:
             self.logger.error(f"Failed to save control comparison visualization to {save_path}: {e}")
         finally:
+            if show:
+                plt.show()
             plt.close(fig)
 
         # Collect statistics for logging
@@ -1119,7 +1124,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
 
         return True    
     
-    def visualize_individual_variation(self, save_path=None):
+    def visualize_individual_variation(self, save_path=None, show=False):
         """Create visualizations showing individual variation in outbreak patterns."""
         self.logger.info("Visualizing individual variation in outbreak patterns...")
         set_plotting_style(self.config) # Apply style
@@ -1392,6 +1397,8 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         except Exception as e:
             self.logger.error(f"Failed to save individual variation visualization: {e}")
         finally:
+            if show:
+                plt.show()
             plt.close(fig)
 
         # Collect statistics for logging
@@ -1413,7 +1420,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
 
         return True
         
-    def visualize_posture_components(self, component_analysis=None, save_path=None):
+    def visualize_posture_components(self, component_analysis=None, save_path=None, show=False):
         """Create visualizations showing the individual components (Revised to include components in Panel B)."""
         self.logger.info("Visualizing posture components (upright vs. hanging tails)...")
         set_plotting_style(self.config) # Apply style
@@ -1668,6 +1675,8 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         except Exception as e:
             self.logger.error(f"Failed to save posture component visualization: {e}")
         finally:
+            if show:
+                plt.show()
             plt.close(fig)
         
         # Collect statistics for logging
@@ -1743,7 +1752,7 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         self.component_analysis = component_analysis # Store results
         return component_analysis
         
-    def visualize_data_completeness(self, save_path=None):
+    def visualize_data_completeness(self, save_path=None, show=False):
         """
         Generates a publication-quality timeline plot visualizing data availability
         with enhanced features for dissertation presentation and highlights excluded events.
@@ -2215,6 +2224,8 @@ class TailPostureVisualizer(TailPostureAnalyzer):
         except Exception as e:
             self.logger.error(f"Failed to save enhanced completeness visualization: {e}")
         finally:
+            if show:
+                plt.show()
             plt.close(fig)
             
         return save_path

@@ -1,15 +1,60 @@
 # processing.py
 import time
+import logging
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from scipy import stats
 from datetime import timedelta
 
-from evaluation.analysis.tail_posture_analysis.core import TailPostureAnalysisBase
+from pipeline.utils.path_manager import PathManager
 from pipeline.utils.data_analysis_utils import (sorting_key, load_monitoring_pipeline_results, get_pen_info)
 
-class DataProcessor(TailPostureAnalysisBase):
+class DataProcessor:
     """Handles data loading and preprocessing for tail posture analysis."""
+    
+    def __init__(self, config=None):
+        """Initialize with configuration parameters."""
+        # Default configuration 
+        self.config = {
+            'resample_freq': 'D',
+            'normalize': True,
+            'smoothing_method': 'rolling',
+            'smoothing_strength': 3,
+            'days_before_list': [1, 2, 3, 5, 7, 10],
+            'output_dir': 'tail_posture_descriptive_results',
+            'random_seed': 42,
+            'confidence_level': 0.95,
+            'interpolation_method': 'linear',
+            'interpolation_order': 3,
+            'max_allowed_consecutive_missing_days': 3,
+        }
+
+        # Update with user config if provided
+        if config is not None:
+            self.config.update(config)
+
+        # Initialize path manager
+        self.path_manager = PathManager()
+
+        self._setup_logging()
+
+        # Initialize data containers
+        self.monitoring_results = None
+        self.processed_results = []
+        self.excluded_events_count = 0
+        
+    def _setup_logging(self):
+        """Set up logging configuration."""
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler("tail_posture_analysis_descriptive.log"),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger("tail_posture_descriptive_analysis")
     
     def load_data(self):
         """Load monitoring pipeline results including missing data info."""
