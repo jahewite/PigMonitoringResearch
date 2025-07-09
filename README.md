@@ -262,6 +262,10 @@ This project is licensed under multiple licenses:
 
 The project is supported (was supported) by funds of the Federal Ministry of Food and Agriculture (BMEL) based on a decision of the Parliament of the Federal Republic of Germany. The Federal Office for Agriculture and Food (BLE) provides (provided) coordinating support for digitalization in agriculture as funding organization, grant number 28DE109A18.
 
+## Disclaimer on AI Assistance
+
+Parts of the code and documentation in this project were created or improved with the assistance of generative AI tools (such as GitHub Copilot and large language models). All outputs were reviewed and adapted accordingly.
+
 
 ## Contact
 
