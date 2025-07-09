@@ -279,8 +279,8 @@ pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera4
 pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera5
 pipeline_outputs/monitoring_pipeline/piglet_rearing/Kamera6
 
-# visualizations
-evaluation/results_early_warning_evaluation/visualizations
+# evaluation results
+evaluation/results/results_early_warning_evaluation/hourly/visualizations
 
 # notes
 notes.txt

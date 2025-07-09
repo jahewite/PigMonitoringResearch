@@ -5,7 +5,7 @@ import pandas as pd
 from scipy import stats
 from datetime import timedelta
 
-from evaluation.tail_posture_analysis.core import TailPostureAnalysisBase
+from evaluation.analysis.tail_posture_analysis.core import TailPostureAnalysisBase
 from pipeline.utils.data_analysis_utils import (sorting_key, load_monitoring_pipeline_results, get_pen_info)
 
 class DataProcessor(TailPostureAnalysisBase):
