@@ -1,6 +1,10 @@
 jupyter
 ipywidgets
 tqdm
+scipy
+seaborn
+statsmodels
+scikit-learn
 imageio==2.34.0
 matplotlib==3.5.2
 numpy==1.22.3

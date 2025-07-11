@@ -191,7 +191,7 @@ python3 -m evaluation.analysis.activity_analysis.pig_activity_analyzer
 python3 -m evaluation.analysis.early_warning_analysis.early_warning_analysis
 ```
 
-All analyses generate comprehensive reports, statistical summaries, and publication-quality visualizations in the configured output directory.
+All analyses generate comprehensive reports, statistical summaries, and visualizations in the configured output directory.
 
 ## Datasets
 
