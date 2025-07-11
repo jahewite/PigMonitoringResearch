@@ -1,10 +1,7 @@
-# utils.py
 import os
 import logging
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors # For potential color manipulation
+import matplotlib.colors as mcolors
 
 from pipeline.utils.general import load_json_data
 from pipeline.utils.data_analysis_utils import get_pen_info

@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pandas as pd
-from scipy import stats
 from datetime import timedelta
 
 from evaluation.utils.processing import DataProcessor

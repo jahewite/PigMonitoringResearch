@@ -1,6 +1,3 @@
-import pandas as pd
-import numpy as np
-
 from evaluation.utils.processing import DataProcessor
 
 class DataFilter:

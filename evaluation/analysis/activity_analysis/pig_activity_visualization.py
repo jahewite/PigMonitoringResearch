@@ -1,12 +1,11 @@
 import os
+import logging
+import warnings
 import numpy as np
 import pandas as pd
-from scipy import stats
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
-import logging
-import warnings
 
 warnings.filterwarnings("ignore", message="The handle .* has a label of '_child.*' which cannot be automatically added to the legend.")
 

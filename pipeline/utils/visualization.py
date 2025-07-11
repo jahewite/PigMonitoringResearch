@@ -10,7 +10,6 @@ import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
 
 from datetime import datetime
-from scipy.signal import find_peaks
 
 from pipeline.model_pipeline import ModelPipeline
 from pipeline.utils.path_manager import PathManager
